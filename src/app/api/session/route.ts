@@ -140,8 +140,9 @@ export async function POST(request: Request): Promise<Response> {
         replyTo: data.replyTo,
       });
     }
-  } catch {
-    // Ignored on purpose.
+  } catch (error) {
+    // Never blocks connecting, but leave the cause in the server logs. Name and message only.
+    console.error(`[storage] saving the connection failed: ${error instanceof Error ? `${error.name}: ${error.message}` : "unknown error"}`);
   }
   return json(statusBody(data, account), headers);
 }

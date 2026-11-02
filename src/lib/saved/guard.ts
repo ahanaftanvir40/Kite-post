@@ -4,6 +4,16 @@ import { json } from "@/lib/http";
 import { savedLimiter } from "@/lib/limiters";
 import { clientKey } from "@/lib/rateLimit";
 
+/**
+ * The browser only ever sees a generic message. This leaves the real cause in the server logs
+ * (an Atlas IP allow-list, bad credentials, a wrong host). Name and message only: never the URI.
+ */
+function logStorageFailure(stage: "connect" | "query", error: unknown): void {
+  const name = error instanceof Error ? error.name : "Error";
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[storage] ${stage} failed: ${name}: ${message}`);
+}
+
 export interface Access {
   account: Account;
   /** The signed-in Google account's email. Every saved record hangs off it. */
@@ -29,7 +39,8 @@ export async function authorize(request: Request, headers: Headers): Promise<Acc
   let store: Store | null;
   try {
     store = await getStore();
-  } catch {
+  } catch (error) {
+    logStorageFailure("connect", error);
     return { ok: false, response: json({ error: "Could not reach the database. Try again shortly.", code: "storage" }, headers, 503) };
   }
   if (!store) {
@@ -79,6 +90,7 @@ export async function guarded<T>(headers: Headers, work: () => Promise<T>): Prom
     if (error instanceof StoreNotFoundError) {
       return { ok: false, response: json({ error: error.message, code: "no-workspace" }, headers, 404) };
     }
+    logStorageFailure("query", error);
     return { ok: false, response: json({ error: "Could not reach the database. Try again shortly.", code: "storage" }, headers, 503) };
   }
 }
