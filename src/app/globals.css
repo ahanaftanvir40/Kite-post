@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+/* Laptop screens: wide enough for the desktop layout, but short (13-14" MacBooks leave ~800px of viewport). */
+@custom-variant laptop (@media (min-width: 64rem) and (max-height: 54rem));
+
+/*
+ * Kitepost. One world across the landing and the workspace: ink and cobalt on
+ * a cool white sheet, the kite's coral as the single warm note. Cobalt is the
+ * action colour; the other hues are semantic only (sent, failed, needs-a-look).
+ * The `postal` tokens are the action colour under their original names.
+ */
+@theme {
+  --color-paper: #f5f6fc;
+  --color-sheet: #ffffff;
+  --color-sunk: #eceffb;
+  --color-line: #e2e6f5;
+  --color-line-strong: #c4cae6;
+
+  --color-ink: #12142b;
+  --color-ink-2: #3d4163;
+  --color-ink-3: #595d82;
+
+  --color-postal: #2b3fe6;
+  --color-postal-deep: #1e2db0;
+  --color-postal-wash: #e6eafe;
+
+  --color-sent: #1f6b3a;
+  --color-sent-wash: #def1e3;
+  --color-failed: #b3261e;
+  --color-failed-wash: #fbe4e1;
+  --color-warn: #7a5100;
+  --color-warn-wash: #fbeec9;
+
+  /* Kitepost brand: the kite's four facets, plus the envelope paper. */
+  --color-kite-ink: #12142b;
+  --color-kite-cobalt: #2b3fe6;
+  --color-kite-cobalt-deep: #1e2db0;
+  --color-kite-coral: #f2542d;
+  --color-kite-paper: #f6f1e4;
+  --color-kite-paper-deep: #e4dcc8;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+
+  --radius-stamp: 0.625rem;
+  --shadow-lift: 0 1px 2px rgb(18 20 43 / 0.06), 0 14px 32px -14px rgb(18 20 43 / 0.3);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root {
+  color-scheme: light;
+  scrollbar-color: var(--color-line-strong) transparent;
+  scrollbar-width: thin;
+}
+
+html {
+  background: var(--color-paper);
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  caret-color: var(--color-postal);
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-postal);
+  color: var(--color-sheet);
+}
+
+::placeholder {
+  color: var(--color-ink-3);
+  opacity: 0.85;
+}
+
+/* In the base layer so a component's own focus style (fields, selects) wins over this default. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-postal);
+    outline-offset: 2px;
+  }
+  /* Fields show focus with their border alone, never an outer ring. */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border: 2px solid var(--color-paper);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+a {
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+/* Tabular numerals wherever numbers line up. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Template tokens inside the TipTap editor. */
+.ProseMirror {
+  min-height: 15rem;
+  outline: none;
+  line-height: 1.6;
+}
+.ProseMirror p {
+  margin: 0 0 0.85em;
+}
+.ProseMirror ul {
+  list-style: disc;
+  padding-left: 1.4em;
+  margin: 0 0 0.85em;
+}
+.ProseMirror li > p {
+  margin: 0;
+}
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--color-ink-3);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.tok {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  border-radius: 4px;
+  padding: 0 3px;
+}
+.tok-ok {
+  background: var(--color-postal-wash);
+  color: var(--color-postal-deep);
+}
+.tok-bad {
+  background: var(--color-failed-wash);
+  color: var(--color-failed);
+  text-decoration: underline wavy var(--color-failed);
+  text-underline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
