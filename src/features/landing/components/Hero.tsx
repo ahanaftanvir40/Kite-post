@@ -9,7 +9,7 @@ import { Envelope } from "./Envelope";
 import { HeroBlooms } from "./HeroBlooms";
 
 /** Two big facets from the kite, cropped by the stage, so the field reads as the mark blown up. */
-function Facets() {
+export function Facets() {
   return (
     <>
       <div

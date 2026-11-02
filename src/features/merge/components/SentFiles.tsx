@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatWhen, type FinishedList, type SentFile } from "../saved";
 import { useMergeStore } from "../store";
 import { SavedRow, SavedShell } from "./SavedParts";
+import { LoadingRows } from "@/components/ui/Skeleton";
 
 const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
 
@@ -72,7 +73,7 @@ export function DoneAndSent({ workspaceName, finished, loose, loading, error, bu
       ) : null}
       {loading || loose.length > 0 ? (
         <ul aria-label="Sent files" className="divide-y divide-line rounded-stamp border border-line bg-sheet">
-          {loading ? <li className="px-3 py-3 text-sm text-ink-3">Loading…</li> : null}
+          {loading ? <li className="px-3 py-3"><LoadingRows label="Loading sent files" /></li> : null}
           {loose.map((f) => (
             <SavedRow
               key={f.fileName.toLowerCase()}

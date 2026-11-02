@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { KiteFacets, KiteGlyph } from "@/components/brand/KiteMark";
 
 /**
@@ -28,7 +28,8 @@ const STAMP_STYLE = { "--d": "8px", "--r": "2.4px" } as CSSProperties;
 const TOKEN =
   "inline-block rounded-[0.7cqw] bg-[#E6EAFE] px-[1.3cqw] py-[0.15cqw] text-kite-cobalt";
 
-export function Envelope({ className = "" }: { className?: string }) {
+/** `letter` replaces the default mail-merge demo text; it is laid out inside the same sheet of paper. */
+export function Envelope({ className = "", letter }: { className?: string; letter?: ReactNode }) {
   return (
     <div className={`envelope relative aspect-[640/520] w-full [container-type:inline-size] ${className}`}>
       {/* The open flap. It swings up from behind the pocket on entrance. */}
@@ -54,20 +55,24 @@ export function Envelope({ className = "" }: { className?: string }) {
           >
             <KiteGlyph className="size-full" />
           </div>
-          <p className="font-display text-[4.6cqw] font-semibold leading-tight tracking-[-0.02em]">
-            Hi{" "}
-            <span data-token="firstname" className={TOKEN}>
-              @firstname
-            </span>
-            ,
-          </p>
-          <p className="mt-[2.2cqw] text-[3.1cqw] leading-[1.5] text-[#444b5d]">
-            I saw what you are building at{" "}
-            <span data-token="company" className={`${TOKEN} font-medium`}>
-              @company
-            </span>{" "}
-            and wanted to say hello properly.
-          </p>
+          {letter ?? (
+            <>
+              <p className="font-display text-[4.6cqw] font-semibold leading-tight tracking-[-0.02em]">
+                Hi{" "}
+                <span data-token="firstname" className={TOKEN}>
+                  @firstname
+                </span>
+                ,
+              </p>
+              <p className="mt-[2.2cqw] text-[3.1cqw] leading-[1.5] text-[#444b5d]">
+                I saw what you are building at{" "}
+                <span data-token="company" className={`${TOKEN} font-medium`}>
+                  @company
+                </span>{" "}
+                and wanted to say hello properly.
+              </p>
+            </>
+          )}
         </div>
       </div>
 

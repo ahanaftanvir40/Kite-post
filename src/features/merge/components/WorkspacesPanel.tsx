@@ -9,6 +9,7 @@ import { createWorkspace, deleteWorkspace, listWorkspaces, renameWorkspace, type
 import { messageOf } from "../saved";
 import { useMergeStore } from "../store";
 import { SaveForm } from "./SavedParts";
+import { LoadingRows } from "@/components/ui/Skeleton";
 
 const ONLY_ONE_NOTE = "You need at least one workspace, so this one can't be deleted.";
 
@@ -176,7 +177,7 @@ export function WorkspacesPanel() {
     return (
       <div className="max-w-xl">
         <h2 className="font-display text-2xl font-semibold tracking-[-0.025em]">Workspaces</h2>
-        <p className="mt-2 text-sm text-ink-2">{session ? "Sign in to keep your work in workspaces." : "Loading…"}</p>
+        <p className="mt-2 text-sm text-ink-2">{session ? "Sign in to keep your work in workspaces." : <LoadingRows label="Loading" rows={1} className="max-w-xs" />}</p>
       </div>
     );
   }
@@ -228,7 +229,7 @@ export function WorkspacesPanel() {
           {error}
         </p>
       ) : null}
-      {workspaces === null ? <p className="mt-6 text-sm text-ink-3">Loading…</p> : null}
+      {workspaces === null ? <LoadingRows label="Loading workspaces" rows={3} className="mt-6" /> : null}
       {workspaces && workspaces.length === 0 ? (
         <p className="mt-6 text-sm text-ink-3">No workspaces yet. Create one above, then add your recipients inside it.</p>
       ) : null}

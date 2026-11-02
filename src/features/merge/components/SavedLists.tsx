@@ -11,6 +11,7 @@ import { SavedEmpty, SavedRow, SavedShell, SaveForm } from "./SavedParts";
 import { NeedsWorkspace } from "./WorkspaceNotice";
 import { SaveListModal } from "./SaveListModal";
 import { DoneAndSent } from "./SentFiles";
+import { LoadingRows } from "@/components/ui/Skeleton";
 
 /** Lists saved earlier in the active workspace, shown on the empty Recipients screen. */
 export function SavedLists() {
@@ -111,7 +112,7 @@ export function SavedLists() {
         </p>
       ) : null}
       <ul aria-label="Saved lists" className="divide-y divide-line rounded-stamp border border-line bg-sheet">
-        {waiting ? <SavedEmpty>Loading…</SavedEmpty> : null}
+        {waiting ? <li className="px-3 py-3"><LoadingRows label="Loading saved lists" /></li> : null}
         {!waiting && items.length === 0 && !error ? <SavedEmpty>No saved lists in this workspace yet. Upload one and choose Save list.</SavedEmpty> : null}
         {!waiting && items.length > 0 && todo.length === 0 ? <SavedEmpty>Every saved list is marked as done.</SavedEmpty> : null}
         {(waiting ? [] : todo).map((l) => (

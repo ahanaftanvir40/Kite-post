@@ -7,6 +7,7 @@ import { formatWhen, messageOf, useSavedItems } from "../saved";
 import { useMergeStore } from "../store";
 import { SavedEmpty, SavedRow, SavedShell, SaveForm } from "./SavedParts";
 import { NeedsWorkspace } from "./WorkspaceNotice";
+import { LoadingRows } from "@/components/ui/Skeleton";
 
 /** Save the current subject and body for reuse, and bring a saved one back. */
 export function SavedTemplates() {
@@ -64,7 +65,7 @@ export function SavedTemplates() {
         </p>
       ) : null}
       <ul aria-label="Saved templates" className="divide-y divide-line rounded-stamp border border-line bg-sheet">
-        {loading ? <SavedEmpty>Loading…</SavedEmpty> : null}
+        {loading ? <li className="px-3 py-3"><LoadingRows label="Loading templates" /></li> : null}
         {!loading && items.length === 0 && !error ? <SavedEmpty>No templates in this workspace yet.</SavedEmpty> : null}
         {items.map((t) => (
           <SavedRow

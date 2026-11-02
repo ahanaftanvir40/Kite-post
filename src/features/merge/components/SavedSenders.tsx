@@ -6,6 +6,7 @@ import { deleteSaved, listSenders, switchSender, type SenderRecord } from "../ap
 import { formatWhen, messageOf, useSavedItems } from "../saved";
 import { useMergeStore } from "../store";
 import { SavedEmpty, SavedRow, SavedShell } from "./SavedParts";
+import { LoadingRows } from "@/components/ui/Skeleton";
 
 /** From / Reply-To pairs used with this mailbox before. Never includes a password. */
 export function SavedSenders() {
@@ -57,7 +58,7 @@ export function SavedSenders() {
         </p>
       ) : null}
       <ul aria-label="Saved senders" className="divide-y divide-line rounded-stamp border border-line bg-sheet">
-        {loading ? <SavedEmpty>Loading…</SavedEmpty> : null}
+        {loading ? <li className="px-3 py-3"><LoadingRows label="Loading senders" /></li> : null}
         {!loading && items.length === 0 && !error ? <SavedEmpty>None yet.</SavedEmpty> : null}
         {items.map((s) => {
           const active = s.fromAddress.toLowerCase() === current?.toLowerCase();

@@ -331,7 +331,13 @@ describe("Workspace", () => {
     render(<Workspace />);
     expect(await screen.findByRole("heading", { name: "Connect your mailbox" })).toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Steps" });
-    expect(within(nav).getAllByRole("button").map((b) => b.textContent?.replace(/^\d/, ""))).toEqual([
+    // The mobile short label is aria-hidden, so read only what assistive tech reads.
+    const readable = (b: HTMLElement) => {
+      const copy = b.cloneNode(true) as HTMLElement;
+      copy.querySelectorAll("[aria-hidden]").forEach((el) => el.remove());
+      return copy.textContent?.replace(/^\d/, "");
+    };
+    expect(within(nav).getAllByRole("button").map(readable)).toEqual([
       "Connect",
       "Recipients",
       "Compose",

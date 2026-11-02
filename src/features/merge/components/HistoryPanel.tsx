@@ -9,6 +9,7 @@ import { useActiveWorkspace } from "../hooks";
 import { formatWhen, messageOf, useSavedItems } from "../saved";
 import { useMergeStore } from "../store";
 import { NeedsWorkspace } from "./WorkspaceNotice";
+import { LoadingRows } from "@/components/ui/Skeleton";
 
 function RunRow({ run, workspaceId }: { run: RunSummary; workspaceId: string }) {
   const [open, setOpen] = useState(false);
@@ -63,7 +64,7 @@ function RunRow({ run, workspaceId }: { run: RunSummary; workspaceId: string }) 
       </button>
       {open ? (
         <div id={panelId} className="border-t border-line bg-sunk/40 px-3 py-2">
-          {loading ? <p className="text-sm text-ink-3">Loading…</p> : null}
+          {loading ? <LoadingRows label="Loading run details" rows={2} /> : null}
           {error ? (
             <p role="alert" className="text-sm text-failed">
               {error}
@@ -110,7 +111,7 @@ export function HistoryPanel() {
     return (
       <div className="max-w-xl">
         <h2 className="font-display text-2xl font-semibold tracking-[-0.025em]">Send history</h2>
-        <p className="mt-2 text-sm text-ink-2">{session ? "Sign in to see what you have sent." : "Loading…"}</p>
+        <p className="mt-2 text-sm text-ink-2">{session ? "Sign in to see what you have sent." : <LoadingRows label="Loading" rows={1} className="max-w-xs" />}</p>
       </div>
     );
   }
@@ -154,7 +155,7 @@ export function HistoryPanel() {
           {error}
         </p>
       ) : null}
-      {loading ? <p className="mt-4 text-sm text-ink-3">Loading…</p> : null}
+      {loading ? <LoadingRows label="Loading history" rows={3} className="mt-4" /> : null}
       {!loading && !error && items.length === 0 && markedDone.length === 0 ? (
         <p className="mt-4 text-sm text-ink-3">Nothing sent yet. Finished runs show up here.</p>
       ) : null}
