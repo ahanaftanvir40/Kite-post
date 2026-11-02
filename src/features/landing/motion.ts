@@ -48,7 +48,8 @@ export function useHeroMotion(scope: RefObject<HTMLElement | null>) {
       const heading = scope.current.querySelector<HTMLElement>("h1");
       if (!heading) return;
 
-      const split = SplitText.create(heading, { type: "words", ignore: ".hero-swash", aria: "none" });
+      // Split only the lead-in: SplitText rebuilds its target's DOM, which would detach React from the squiggly span.
+      const split = SplitText.create(heading.querySelector(".hero-lead")!, { type: "words", aria: "none" });
       const tokens = q("[data-token]") as HTMLElement[];
 
       // Closed, the flap lies over the pocket; once it passes vertical it drops behind it.

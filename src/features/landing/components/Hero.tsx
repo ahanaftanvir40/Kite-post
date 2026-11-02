@@ -3,6 +3,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRef } from "react";
+import { SquigglyText } from "@/components/ui/squiggly-text";
 import { useHeroMotion } from "../motion";
 import { Envelope } from "./Envelope";
 import { HeroBlooms } from "./HeroBlooms";
@@ -36,28 +37,30 @@ export function Hero() {
           id="hero-title"
           className="font-display text-balance text-[clamp(2.6rem,6.4vw,5rem)] laptop:text-[clamp(2.4rem,4.7vw,3.6rem)] font-semibold leading-[0.98] tracking-[-0.035em] text-kite-ink"
         >
-          Find leads. Mail merge from{" "}
+          <span className="hero-lead">Find leads. Mail merge from</span>{" "}
           <span className="hero-swash relative inline-block whitespace-nowrap">
-            any domain
-            <svg viewBox="0 0 300 18" aria-hidden className="absolute -bottom-[0.1em] left-0 w-full overflow-visible">
-              <path
-                className="hero-swash-path"
-                d="M3 11 C 48 4, 96 14, 150 8 S 252 3, 297 9"
-                fill="none"
-                stroke="var(--color-kite-coral)"
-                strokeWidth="7"
-                strokeLinecap="round"
-              />
-            </svg>
+            <SquigglyText scale={4} className="relative">
+              any domain
+              <svg viewBox="0 0 300 18" aria-hidden className="absolute -bottom-[0.1em] left-0 w-full overflow-visible">
+                <path
+                  className="hero-swash-path"
+                  d="M3 11 C 48 4, 96 14, 150 8 S 252 3, 297 9"
+                  fill="none"
+                  stroke="var(--color-kite-coral)"
+                  strokeWidth="7"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </SquigglyText>
           </span>
           .
         </h1>
         <p className="hero-fade mt-5 laptop:mt-4 max-w-xl text-balance text-lg leading-relaxed text-ink-2 sm:text-xl laptop:text-lg">
           Find customers, or professors to write to. Then send them all a personal email at once, from any email address you own.
         </p>
-        <p className="hero-fade mt-4 laptop:mt-3 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-full border border-line bg-white/70 px-4 py-1.5 text-sm text-ink-3">
-          <span>Gmail says &ldquo;nope&rdquo; to mail merge from a different address.</span>
-          <span className="font-medium text-kite-ink">We say &ldquo;sure.&rdquo;</span>
+        <p className="hero-fade mt-8 laptop:mt-6 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-full border border-line bg-white/70 px-4 py-1.5 text-sm text-ink-3">
+          <span>Gmail&rsquo;s mail merge can&rsquo;t send as an alias.</span>
+          <span className="font-medium text-kite-ink">Kitepost can.</span>
         </p>
         <div className="hero-fade mt-6 laptop:mt-6 flex flex-col items-center gap-3">
           <Link
