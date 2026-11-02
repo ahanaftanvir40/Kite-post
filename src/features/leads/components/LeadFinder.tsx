@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { TextField, inputClass } from "@/components/ui/TextField";
 import { download } from "@/features/merge/download";
+import { QuotaExhaustedError } from "../api";
 import { leadsToXlsx, runLeadSearch, type Phase, type Progress } from "../run";
+import { BetaQuotaModal } from "./BetaQuotaModal";
 
 const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const TARGETS = [
@@ -38,6 +40,7 @@ export function LeadFinder() {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quotaOpen, setQuotaOpen] = useState(false);
   const abort = useRef<AbortController | null>(null);
 
   async function submit(event: FormEvent) {
@@ -51,7 +54,8 @@ export function LeadFinder() {
     try {
       await runLeadSearch({ description, productUrl, location, target: Number(target) }, controller.signal, setProgress);
     } catch (e) {
-      if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "The lead search failed.");
+      if (e instanceof QuotaExhaustedError) setQuotaOpen(true);
+      else if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "The lead search failed.");
     } finally {
       setRunning(false);
     }
@@ -63,6 +67,7 @@ export function LeadFinder() {
 
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+      {quotaOpen ? <BetaQuotaModal onClose={() => setQuotaOpen(false)} /> : null}
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Find leads</h1>
         <Badge tone="warn">Beta</Badge>

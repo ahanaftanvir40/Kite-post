@@ -1,6 +1,7 @@
 import { COUNTRY_BY_CODE, type Country } from "./countries";
 import { cleanEmail, hostOf } from "./emails";
 import { LeadsConfigError, scrapePage, searchWeb, type WebResult } from "./serper";
+import { homepageName, universityName } from "./universities";
 
 export type Kind = "professors" | "admissions" | "funding";
 export type Level = "any" | "masters" | "phd" | "postdoc";
@@ -9,8 +10,12 @@ export interface Person {
   name: string;
   greeting: string;
   role: string;
-  /** Registrable domain of the university site, e.g. ox.ac.uk. */
+  /** The university's name, e.g. University of Oxford. */
   university: string;
+  /** Registrable domain of the university site, e.g. ox.ac.uk. */
+  domain: string;
+  /** Country the search was run in, e.g. United Kingdom. */
+  country: string;
   email: string;
   otherEmails: string[];
   about: string;
@@ -59,7 +64,7 @@ export function universityDomain(host: string, suffix: string): string {
   return h.split(".").slice(-2).join(".");
 }
 
-const TITLE = /^(?:(?:prof(?:essor)?|dr|mr|mrs|ms|assoc|assist|dipl|ing|habil)\.?\s+)+/i;
+const TITLE = /^(?:meet\s+)?(?:(?:prof(?:essor)?|dr|mr|mrs|ms|assoc|assist|dipl|ing|habil)\.?\s+)+/i;
 const PARTICLE = new Set(["van", "von", "de", "der", "den", "da", "di", "del", "la", "le", "bin", "al", "el", "ten", "ter"]);
 const NAME_STOP = /\b(university|universit[äay]t?|department|school|faculty|institute|home|page|people|staff|contact|research|group|lab|laboratory|centre|center|profile|professor|lecturer|college|email|office|news|about|team|members?|students?|admissions?|programmes?|science|sciences|engineering|studies|director|chair|reader|phd|msc|postdoc|information|areas?|interests?|publications?|teaching)\b/i;
 
@@ -150,14 +155,23 @@ function absolute(href: string, base: string): string {
  * ponytail: layout heuristics; unusual pages yield a blank name, upgrade to an LLM pass if that bites.
  */
 export function extractPeople(kind: Kind, item: WebResult, pageText: string, country: Country): Person[] {
+  const text = `${item.title}\n${item.snippet}\n${pageText.slice(0, 4000)}`;
+  // A person belongs to the university in their email address. A job board or news site hosting the page does not count.
+  return readPeople(kind, item, pageText, country).map((p) => {
+    const domain = p.email ? universityDomain(p.email.split("@")[1], country.suffix) : p.domain;
+    return { ...p, domain, university: universityName(domain, text) };
+  });
+}
+
+function readPeople(kind: Kind, item: WebResult, pageText: string, country: Country): Person[] {
   const host = hostOf(item.url) ?? "";
-  const university = universityDomain(host, country.suffix);
+  const domain = universityDomain(host, country.suffix);
   const md = deobfuscate(pageText);
   const emails = emailsWithPosition(md).filter(({ email }) => {
     const d = email.split("@")[1];
-    return d === country.suffix || d.endsWith(`.${country.suffix}`) || universityDomain(d, country.suffix) === university;
+    return d === country.suffix || d.endsWith(`.${country.suffix}`) || universityDomain(d, country.suffix) === domain;
   });
-  const base = { university, url: item.url };
+  const base = { university: domain, domain, country: country.name, url: item.url };
 
   if (kind !== "professors") {
     if (!emails.length) return [];
@@ -165,7 +179,6 @@ export function extractPeople(kind: Kind, item: WebResult, pageText: string, cou
     return [
       {
         ...base,
-        university: universityDomain(sorted[0].split("@")[1], country.suffix),
         name: item.title.split(/\s+[-–—|]\s+/)[0].replace(/\.{3}|…/g, "").trim().slice(0, 90),
         greeting: kind === "admissions" ? "Dear Admissions Team," : "Dear Scholarships Team,",
         role: kind === "admissions" ? "Admissions" : "Funding",
@@ -215,6 +228,13 @@ export function extractPeople(kind: Kind, item: WebResult, pageText: string, cou
   });
 }
 
+/** For universities neither the list nor the page named, read the name off the university's own homepage. */
+async function nameUnknownUniversities(people: Person[]): Promise<Person[]> {
+  const unknown = [...new Set(people.filter((p) => p.university === p.domain).map((p) => p.domain))];
+  const names = new Map(await Promise.all(unknown.map(async (d) => [d, await homepageName(d, scrapePage)] as const)));
+  return people.map((p) => (names.get(p.domain) ? { ...p, university: names.get(p.domain)! } : p));
+}
+
 /** Scrape each result and pull out people. A page that fails to load just yields none. */
 export async function findPeople(kind: Kind, countryCode: string, items: WebResult[]): Promise<Person[]> {
   const country = COUNTRY_BY_CODE.get(countryCode);
@@ -230,5 +250,5 @@ export async function findPeople(kind: Kind, countryCode: string, items: WebResu
       }
     }),
   );
-  return pages.flat();
+  return nameUnknownUniversities(pages.flat());
 }

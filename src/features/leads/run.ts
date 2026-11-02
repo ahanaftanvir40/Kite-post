@@ -2,6 +2,7 @@ import { hostOf } from "@/lib/leads/emails";
 import type { EmailResult, Place } from "@/lib/leads/serper";
 import type { LeadPlan } from "@/lib/leads/plan";
 import { batchToXlsx } from "@/lib/spreadsheet/batches";
+import { leadPost, startLeadRun } from "./api";
 
 export interface LeadInput {
   description: string;
@@ -36,13 +37,6 @@ export interface Progress {
 const EMAIL_CHUNK = 6;
 const MAX_PAGES = 5;
 
-async function post<T>(url: string, body: unknown, signal: AbortSignal): Promise<T> {
-  const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
-  const data = (await response.json().catch(() => ({}))) as T & { error?: string };
-  if (!response.ok) throw new Error(data.error ?? "The lead search failed.");
-  return data;
-}
-
 /** Keep the first place per listing id and per website, so chains and repeats don't pad the sheet. */
 export function addUnique(into: Lead[], places: Place[], query: string, limit: number): void {
   const ids = new Set(into.map((l) => l.id));
@@ -57,13 +51,18 @@ export function addUnique(into: Lead[], places: Place[], query: string, limit: n
   }
 }
 
-/** Plan, search, then look for emails, reporting after every step. Stops quietly on abort. */
+/**
+ * Plan, search, then look for emails, reporting after every step. Stops quietly on abort.
+ * Uses one of the account's free searches up front; throws QuotaExhaustedError when none are left.
+ */
 export async function runLeadSearch(input: LeadInput, signal: AbortSignal, onProgress: (p: Progress) => void): Promise<Progress> {
+  const { token } = await startLeadRun(signal);
+  const post = <T>(url: string, body: unknown) => leadPost<T>(url, body, token, signal);
   const state: Progress = { phase: "planning", plan: null, leads: [], checked: 0, toCheck: 0 };
   const report = () => onProgress({ ...state, leads: [...state.leads] });
   report();
 
-  state.plan = await post<LeadPlan>("/api/leads/plan", { description: input.description, productUrl: input.productUrl }, signal);
+  state.plan = await post<LeadPlan>("/api/leads/plan", { description: input.description, productUrl: input.productUrl });
   state.phase = "searching";
   report();
 
@@ -73,7 +72,7 @@ export async function runLeadSearch(input: LeadInput, signal: AbortSignal, onPro
     for (const query of state.plan.queries) {
       if (state.leads.length >= input.target) break;
       if (dry.has(query)) continue;
-      const { places } = await post<{ places: Place[] }>("/api/leads/search", { query, location: input.location, page }, signal);
+      const { places } = await post<{ places: Place[] }>("/api/leads/search", { query, location: input.location, page });
       if (places.length === 0) dry.add(query);
       addUnique(state.leads, places, query, input.target);
       report();
@@ -87,7 +86,7 @@ export async function runLeadSearch(input: LeadInput, signal: AbortSignal, onPro
   report();
   for (let i = 0; i < withSite.length; i += EMAIL_CHUNK) {
     const chunk = withSite.slice(i, i + EMAIL_CHUNK);
-    const { results } = await post<{ results: EmailResult[] }>("/api/leads/emails", { urls: chunk.map((l) => l.website) }, signal);
+    const { results } = await post<{ results: EmailResult[] }>("/api/leads/emails", { urls: chunk.map((l) => l.website) });
     chunk.forEach((lead, j) => {
       lead.emails = results[j]?.emails ?? [];
     });

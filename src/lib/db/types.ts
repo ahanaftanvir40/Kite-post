@@ -118,7 +118,56 @@ export interface RunSummary {
   failed: number;
 }
 
+/** The settings of a student search, as the person chose them. */
+export interface StudySearchParams {
+  kind: "professors" | "admissions" | "funding";
+  field: string;
+  level: "any" | "masters" | "phd" | "postdoc";
+  countries: string[];
+  university: string;
+}
+/** How far a student search got, so the next one can carry on from there instead of reading the same pages again. */
+export interface StudyCrawl {
+  /** Per country code: the last Google result page that was read in full. */
+  pages: Partial<Record<string, number>>;
+  /** Result pages already read. */
+  urls: string[];
+}
+export interface StudySearchInput {
+  /** Identifies the settings (see studyKey). Two downloads with the same key are the same search. */
+  key: string;
+  params: StudySearchParams;
+  /** Who was in the downloaded file: their email, else their name at a university. */
+  contacts: string[];
+  crawl: StudyCrawl;
+}
+export interface StudySearchRecord extends StudySearchInput {
+  /** How many times a file for these settings was downloaded. */
+  downloads: number;
+  lastDownloadedAt: string;
+}
+
+/** Fold a new download into what was remembered for the same search. Shared by every Store. */
+export function mergeStudySearch(
+  before: { contacts: string[]; crawl: StudyCrawl; downloads: number } | null,
+  input: StudySearchInput,
+): { contacts: string[]; crawl: StudyCrawl; downloads: number } {
+  const pages = { ...before?.crawl.pages };
+  for (const [country, page] of Object.entries(input.crawl.pages)) pages[country] = Math.max(pages[country] ?? 0, page ?? 0);
+  return {
+    contacts: [...new Set([...(before?.contacts ?? []), ...input.contacts])].slice(-LIMITS.studyContacts),
+    crawl: { pages, urls: [...new Set([...(before?.crawl.urls ?? []), ...input.crawl.urls])].slice(-LIMITS.studyUrls) },
+    downloads: (before?.downloads ?? 0) + 1,
+  };
+}
+
 export const LIMITS = {
+  /** Student searches remembered per account. The oldest goes first. */
+  studySearches: 30,
+  /** Contacts remembered per student search. */
+  studyContacts: 500,
+  /** Pages already read, remembered per student search. */
+  studyUrls: 600,
   workspaces: 20,
   /** Templates, lists and runs are capped per workspace. Senders are capped per mailbox. */
   templates: 100,
@@ -227,6 +276,25 @@ export interface Store {
   getRunMessages(owner: string, workspaceId: string, runId: string): Promise<MessageLogRecord[]>;
   /** Remove every send run (and its per-recipient log) made from a spreadsheet. Returns how many runs went. */
   deleteRunsForFile(owner: string, workspaceId: string, fileName: string): Promise<number>;
+
+  /**
+   * Lead-finder allowance. Counts one search for this owner and returns true, or returns false
+   * and counts nothing once `limit` is reached. Must be atomic: two searches started at once
+   * cannot both take the last one.
+   */
+  consumeLeadRun(owner: string, limit: number): Promise<boolean>;
+  /** How many lead searches this owner has used. */
+  getLeadRuns(owner: string): Promise<number>;
+
+  /**
+   * Remember that a student search was downloaded. Downloading the same settings again adds the
+   * new contacts to the ones already remembered. Past LIMITS.studySearches the oldest is dropped.
+   */
+  saveStudySearch(owner: string, input: StudySearchInput): Promise<StudySearchRecord>;
+  /** The remembered search with this key, or null if it was never downloaded. */
+  getStudySearch(owner: string, key: string): Promise<StudySearchRecord | null>;
+  /** Newest download first. */
+  listStudySearches(owner: string): Promise<StudySearchRecord[]>;
 }
 
 /** Case-insensitive identity used for upserts. */

@@ -345,6 +345,58 @@ function contract(label: string, make: () => Promise<Store> | Store) {
         expect(await store.getWorkspace(BOB, mine.id)).toBeNull();
       });
 
+      it("counts lead searches per owner and stops at the limit", async () => {
+        const who = `leads-${label}@example.com`;
+        expect(await store.getLeadRuns(who)).toBe(0);
+        expect(await store.consumeLeadRun(who, 2)).toBe(true);
+        expect(await store.consumeLeadRun(who, 2)).toBe(true);
+        expect(await store.consumeLeadRun(who, 2)).toBe(false);
+        expect(await store.getLeadRuns(who)).toBe(2);
+        expect(await store.consumeLeadRun(`other-${who}`, 2)).toBe(true);
+        expect(await store.consumeLeadRun(`zero-${who}`, 0)).toBe(false);
+      });
+
+      it("never lets simultaneous lead searches pass the limit", async () => {
+        const who = `race-${label}@example.com`;
+        const results = await Promise.all(Array.from({ length: 6 }, () => store.consumeLeadRun(who, 2)));
+        expect(results.filter(Boolean)).toHaveLength(2);
+        expect(await store.getLeadRuns(who)).toBe(2);
+      });
+
+      it("remembers downloaded student searches, merges repeats, and keeps accounts apart", async () => {
+        const who = `study-${label}@example.com`;
+        const params = { kind: "professors" as const, field: "Machine Learning", level: "phd" as const, countries: ["uk"], university: "" };
+        expect(await store.getStudySearch(who, "k1")).toBeNull();
+
+        const first = await store.saveStudySearch(who, { key: "k1", params, contacts: ["a@x.ac.uk", "b@x.ac.uk"], crawl: { pages: { uk: 2 }, urls: ["https://x/1"] } });
+        expect(first).toMatchObject({ downloads: 1, contacts: ["a@x.ac.uk", "b@x.ac.uk"], crawl: { pages: { uk: 2 }, urls: ["https://x/1"] } });
+
+        const again = await store.saveStudySearch(who, { key: "k1", params, contacts: ["b@x.ac.uk", "c@x.ac.uk"], crawl: { pages: { uk: 1, de: 3 }, urls: ["https://x/1", "https://x/2"] } });
+        expect(again.downloads).toBe(2);
+        // Progress only moves forward, and pages are remembered once.
+        expect(again.crawl.pages).toEqual({ uk: 2, de: 3 });
+        expect([...again.crawl.urls].sort()).toEqual(["https://x/1", "https://x/2"]);
+        expect([...again.contacts].sort()).toEqual(["a@x.ac.uk", "b@x.ac.uk", "c@x.ac.uk"]);
+        expect(await store.getStudySearch(who, "k1")).toMatchObject({ downloads: 2, params });
+
+        expect(await store.getStudySearch(`other-${who}`, "k1")).toBeNull();
+        expect(await store.listStudySearches(`other-${who}`)).toEqual([]);
+        expect(new Date((await store.getStudySearch(who, "k1"))!.lastDownloadedAt).getTime()).not.toBeNaN();
+      });
+
+      it("keeps only the most recent student searches", async () => {
+        const who = `studycap-${label}@example.com`;
+        const params = { kind: "funding" as const, field: "law", level: "any" as const, countries: ["de"], university: "" };
+        for (let i = 0; i < LIMITS.studySearches + 3; i++) {
+          await store.saveStudySearch(who, { key: `s${i}`, params, contacts: [`p${i}@x.de`], crawl: { pages: {}, urls: [] } });
+          await new Promise((r) => setTimeout(r, 2));
+        }
+        const kept = await store.listStudySearches(who);
+        expect(kept).toHaveLength(LIMITS.studySearches);
+        expect(kept[0].key).toBe(`s${LIMITS.studySearches + 2}`);
+        expect(await store.getStudySearch(who, "s0")).toBeNull();
+      }, 60_000);
+
       it("caps workspaces per owner", async () => {
         const capped = `many-${label}@example.com`;
         for (let i = 0; i < LIMITS.workspaces; i++) await store.createWorkspace(capped, `W${i}`);

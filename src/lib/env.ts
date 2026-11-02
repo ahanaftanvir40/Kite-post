@@ -8,6 +8,10 @@ export interface AppEnv {
   /** MongoDB connection string. Null means saving is switched off. */
   mongoUri: string | null;
   mongoDb: string;
+  /** Lead searches each account gets in the beta. */
+  leadsFreeRuns: number;
+  /** Lower-cased accounts with no lead-search limit (LEADS_UNLIMITED_EMAILS, comma separated). */
+  leadsUnlimited: string[];
 }
 
 export interface LocalAccount {
@@ -62,5 +66,10 @@ export function getEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     localAccount,
     mongoUri: source.MONGODB_URI?.trim() || null,
     mongoDb: source.MONGODB_DB?.trim() || "postie",
+    leadsFreeRuns: toInt(source.LEADS_FREE_RUNS, 2, 0, 1000),
+    leadsUnlimited: (source.LEADS_UNLIMITED_EMAILS ?? "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
   };
 }

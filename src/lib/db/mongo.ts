@@ -3,6 +3,7 @@ import {
   keyOf,
   LEGACY_WORKSPACE_NAME,
   LIMITS,
+  mergeStudySearch,
   STARTER_WORKSPACE_NAME,
   StoreConflictError,
   StoreLastWorkspaceError,
@@ -16,6 +17,9 @@ import {
   type RunSummary,
   type SenderRecord,
   type Store,
+  type StudyCrawl,
+  type StudySearchParams,
+  type StudySearchRecord,
   type TemplateRecord,
   type WorkspaceSummary,
 } from "./types";
@@ -98,6 +102,24 @@ interface RunDoc {
   sent: number;
   failed: number;
 }
+interface LeadUsageDoc {
+  _id: ObjectId;
+  owner: string;
+  /** Lead searches this account has started. */
+  runs: number;
+  updatedAt: Date;
+}
+interface StudySearchDoc {
+  _id: ObjectId;
+  owner: string;
+  key: string;
+  params: StudySearchParams;
+  contacts: string[];
+  /** Missing on searches saved before progress was remembered. */
+  crawl?: StudyCrawl;
+  downloads: number;
+  lastDownloadedAt: Date;
+}
 interface MessageDoc {
   _id: ObjectId;
   owner: string;
@@ -144,6 +166,14 @@ const toSender = (d: SenderDoc): SenderRecord => ({
   replyTo: d.replyTo,
   lastUsedAt: d.lastUsedAt.toISOString(),
 });
+const toStudySearch = (d: StudySearchDoc): StudySearchRecord => ({
+  key: d.key,
+  params: d.params,
+  contacts: d.contacts,
+  crawl: d.crawl ?? { pages: {}, urls: [] },
+  downloads: d.downloads,
+  lastDownloadedAt: d.lastDownloadedAt.toISOString(),
+});
 const toRun = (d: RunDoc): RunSummary => ({
   runId: d.runId,
   subject: d.subject,
@@ -188,6 +218,9 @@ export async function ensureIndexes(db: Db): Promise<void> {
     db.collection("runs").createIndex({ finishedAt: 1 }, { expireAfterSeconds: ttl / 1000 }),
     db.collection("messages").createIndex({ owner: 1, workspaceId: 1, runId: 1, at: 1 }),
     db.collection("messages").createIndex({ at: 1 }, { expireAfterSeconds: ttl / 1000 }),
+    db.collection("leadUsage").createIndex({ owner: 1 }, { unique: true }),
+    db.collection("studySearches").createIndex({ owner: 1, key: 1 }, { unique: true }),
+    db.collection("studySearches").createIndex({ owner: 1, lastDownloadedAt: -1 }),
   ]);
 }
 
@@ -200,6 +233,8 @@ export function createMongoStore(db: Db): Store {
   const senders = db.collection<SenderDoc>("senders");
   const runs = db.collection<RunDoc>("runs");
   const messages = db.collection<MessageDoc>("messages");
+  const leadUsage = db.collection<LeadUsageDoc>("leadUsage");
+  const studySearches = db.collection<StudySearchDoc>("studySearches");
 
   /**
    * Cap per owner (and per workspace, for what lives inside one). Checked before
@@ -523,6 +558,43 @@ export function createMongoStore(db: Db): Store {
         runs.deleteMany({ owner, workspaceId, runId: { $in: ids } }),
       ]);
       return ids.length;
+    },
+    async consumeLeadRun(owner, limit) {
+      if (limit <= 0) return false;
+      // The filter only matches while there is room. At the limit it matches nothing, so the upsert
+      // tries to insert a second document for this owner and the unique index refuses (11000).
+      // The same error also hits the loser of two simultaneous first searches, so try once more:
+      // by then the winner's document exists and the filter can match it.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          await leadUsage.updateOne({ owner, runs: { $lt: limit } }, { $inc: { runs: 1 }, $set: { updatedAt: new Date() } }, { upsert: true });
+          return true;
+        } catch (error) {
+          if ((error as { code?: number }).code !== 11000) throw error;
+        }
+      }
+      return false;
+    },
+    async getLeadRuns(owner) {
+      return (await leadUsage.findOne({ owner }))?.runs ?? 0;
+    },
+    async saveStudySearch(owner, input) {
+      const before = await studySearches.findOne({ owner, key: input.key });
+      const merged = mergeStudySearch(before ? { contacts: before.contacts, crawl: before.crawl ?? { pages: {}, urls: [] }, downloads: before.downloads } : null, input);
+      const doc = { owner, key: input.key, params: input.params, ...merged, lastDownloadedAt: new Date() };
+      await studySearches.updateOne({ owner, key: input.key }, { $set: doc }, { upsert: true });
+      // Over the cap: forget the searches downloaded longest ago.
+      const stale = await studySearches.find({ owner }, { projection: { _id: 1 } }).sort({ lastDownloadedAt: -1 }).skip(LIMITS.studySearches).toArray();
+      if (stale.length) await studySearches.deleteMany({ owner, _id: { $in: stale.map((d) => d._id) } });
+      return toStudySearch({ _id: before?._id ?? new ObjectId(), ...doc });
+    },
+    async getStudySearch(owner, key): Promise<StudySearchRecord | null> {
+      const d = await studySearches.findOne({ owner, key });
+      return d ? toStudySearch(d) : null;
+    },
+    async listStudySearches(owner): Promise<StudySearchRecord[]> {
+      const docs = await studySearches.find({ owner }).sort({ lastDownloadedAt: -1 }).limit(LIMITS.studySearches).toArray();
+      return docs.map(toStudySearch);
     },
     async getRunMessages(owner, workspaceId, runId): Promise<MessageLogRecord[]> {
       const docs = await messages.find({ owner, workspaceId, runId }).sort({ at: 1, _id: 1 }).limit(5000).toArray();

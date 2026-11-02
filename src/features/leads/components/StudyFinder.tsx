@@ -7,9 +7,14 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { TextField } from "@/components/ui/TextField";
 import { download } from "@/features/merge/download";
-import type { Kind, Level } from "@/lib/leads/academic";
+import type { Kind, Level, Person } from "@/lib/leads/academic";
 import { COUNTRIES, COUNTRY_BY_CODE, GENERAL_RESOURCES } from "@/lib/leads/countries";
+import type { StudyCrawl, StudySearchParams, StudySearchRecord } from "@/lib/db/types";
+import { QuotaExhaustedError, readLeadQuota } from "../api";
+import { findPreviousDownload, rememberDownload } from "../history";
 import { peopleToXlsx, runStudySearch, type StudyProgress } from "../study";
+import { BetaQuotaModal } from "./BetaQuotaModal";
+import { RepeatSearchModal } from "./RepeatSearchModal";
 
 const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
@@ -48,11 +53,23 @@ export function StudyFinder() {
   const [progress, setProgress] = useState<StudyProgress | null>(null);
   const [searchedField, setSearchedField] = useState("");
   const [running, setRunning] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quotaOpen, setQuotaOpen] = useState(false);
+  /** A search that matches an earlier download, waiting for the person to say go. */
+  const [repeat, setRepeat] = useState<{ previous: StudySearchRecord; remaining: number | null } | null>(null);
+  /** How many people from an earlier download this search left out. */
+  const [skipped, setSkipped] = useState(0);
+  /** The settings the search on screen was run with, kept so a later edit to the form can't change what gets remembered. */
+  const [searched, setSearched] = useState<StudySearchParams | null>(null);
   const abort = useRef<AbortController | null>(null);
 
   function toggleCountry(code: string) {
     setCountries((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : prev.length < 4 ? [...prev, code] : prev));
+  }
+
+  function currentParams(): StudySearchParams {
+    return { kind, field: field.trim(), level, countries, university: university.trim() };
   }
 
   async function submit(event: FormEvent) {
@@ -62,19 +79,52 @@ export function StudyFinder() {
       setError("Pick at least one country.");
       return;
     }
+    const params = currentParams();
+    setError(null);
+    setChecking(true);
+    // A repeat is spotted before anything is spent, so "Not now" costs the person nothing.
+    const previous = await findPreviousDownload(params);
+    setChecking(false);
+    if (previous) {
+      setRepeat({ previous, remaining: (await readLeadQuota())?.remaining ?? null });
+      return;
+    }
+    await search(params, null);
+  }
+
+  async function search(params: StudySearchParams, previous: StudySearchRecord | null) {
     const controller = new AbortController();
     abort.current = controller;
     setRunning(true);
     setError(null);
     setProgress(null);
-    setSearchedField(field.trim());
+    setSearched(params);
+    setSkipped(previous?.contacts.length ?? 0);
+    setSearchedField(params.field);
     try {
-      await runStudySearch({ kind, field, level, countries, university, target: Number(target) }, controller.signal, setProgress);
+      await runStudySearch(
+        { ...params, target: Number(target), previous: previous ? { contacts: previous.contacts, crawl: previous.crawl } : undefined },
+        controller.signal,
+        setProgress,
+      );
     } catch (e) {
-      if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "The search failed.");
+      if (e instanceof QuotaExhaustedError) setQuotaOpen(true);
+      else if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "The search failed.");
     } finally {
       setRunning(false);
     }
+  }
+
+  function searchAgain() {
+    if (!repeat) return;
+    const { previous } = repeat;
+    setRepeat(null);
+    void search(currentParams(), previous);
+  }
+
+  function downloadFile(list: Person[], crawl: StudyCrawl) {
+    download(skipped > 0 ? "study-abroad-contacts-new.xlsx" : "study-abroad-contacts.xlsx", peopleToXlsx(list, searchedField), XLSX_TYPE);
+    if (searched) void rememberDownload(searched, list, crawl);
   }
 
   const people = progress?.people ?? [];
@@ -84,6 +134,8 @@ export function StudyFinder() {
 
   return (
     <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+      {quotaOpen ? <BetaQuotaModal onClose={() => setQuotaOpen(false)} /> : null}
+      {repeat ? <RepeatSearchModal previous={repeat.previous} remaining={repeat.remaining} onSearch={searchAgain} onClose={() => setRepeat(null)} /> : null}
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Study abroad contacts</h1>
         <Badge tone="warn">Beta</Badge>
@@ -161,7 +213,7 @@ export function StudyFinder() {
           <Select aria-label="How many contacts" value={target} options={TARGETS} onChange={setTarget} />
         </div>
         <div className="flex items-end gap-2 md:col-span-2">
-          <Button type="submit" variant="primary" loading={running} icon={<Search className="size-4" aria-hidden />}>
+          <Button type="submit" variant="primary" loading={running || checking} icon={<Search className="size-4" aria-hidden />}>
             {running ? "Searching" : "Find contacts"}
           </Button>
           {running ? (
@@ -192,11 +244,18 @@ export function StudyFinder() {
               variant="primary"
               disabled={people.length === 0}
               icon={<Download className="size-4" aria-hidden />}
-              onClick={() => download("study-abroad-contacts.xlsx", peopleToXlsx(people, searchedField), XLSX_TYPE)}
+              onClick={() => downloadFile(people, progress.crawl)}
             >
-              Download Excel
+              {skipped > 0 ? "Download new contacts" : "Download Excel"}
             </Button>
           </div>
+          {skipped > 0 ? (
+            <p className="mt-3 text-[13px] text-ink-3">
+              {people.length > 0
+                ? `Carried on from your last download: these are all new, and the ${skipped} you already have are left out.`
+                : `Nothing new this time. The ${skipped} you already have are left out. Try another country, a broader subject, or leave the university empty.`}
+            </p>
+          ) : null}
           {!running && progress.phase === "done" && people.length < 5 ? (
             <p className="mt-3 text-[13px] text-ink-3">Few results. Try a broader subject, another country, or leave the university empty.</p>
           ) : null}
@@ -220,7 +279,10 @@ export function StudyFinder() {
                         <span className="text-xs text-ink-3">{p.role}</span>
                       </td>
                       <td className="px-3 py-2">{p.email || <span className="text-ink-3">Not public</span>}</td>
-                      <td className="px-3 py-2 text-ink-2">{p.university}</td>
+                      <td className="px-3 py-2">
+                        <span className="block">{p.university}</span>
+                        <span className="text-xs text-ink-3">{p.country}</span>
+                      </td>
                       <td className="px-3 py-2">
                         <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-postal hover:underline">
                           Open <ExternalLink className="size-3" aria-hidden />
@@ -266,7 +328,7 @@ export function StudyFinder() {
             <li>Read one or two of the professor&apos;s recent papers and mention them. Generic emails are ignored.</li>
             <li>Keep it short: who you are, why their work, what you ask, and your CV attached or linked.</li>
             <li>Ask admissions offices about deadlines, English test scores and documents. Ask professors about supervision and funding.</li>
-            <li>Use the Excel columns in the email merger: <code>@greeting</code>, <code>@name</code>, <code>@university</code>, <code>@field</code>.</li>
+            <li>Use the Excel columns in the email merger: <code>@greeting</code>, <code>@name</code>, <code>@university</code>, <code>@country</code>, <code>@field</code>.</li>
           </ul>
         </div>
       </section>

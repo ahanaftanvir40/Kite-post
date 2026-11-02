@@ -40,7 +40,8 @@ export const academicSchema = z.object({
   level: z.enum(["any", "masters", "phd", "postdoc"]),
   country: countryCode,
   university: z.string().trim().max(100),
-  page: z.number().int().min(1).max(4),
+  // Repeat searches carry on from where the last one stopped, so the page can go well past the first few.
+  page: z.number().int().min(1).max(30),
 });
 
 export const peopleSchema = z.object({
@@ -50,6 +51,24 @@ export const peopleSchema = z.object({
     .array(z.object({ url: httpUrl, title: z.string().max(300), snippet: z.string().max(600) }))
     .min(1)
     .max(6),
+});
+
+export const studyParamsSchema = z.object({
+  kind,
+  field: z.string().trim().min(2).max(100),
+  level: z.enum(["any", "masters", "phd", "postdoc"]),
+  countries: z.array(countryCode).min(1).max(4),
+  university: z.string().trim().max(100),
+});
+
+/** A finished download: the settings searched and who was in the file. */
+export const studyHistorySchema = z.object({
+  params: studyParamsSchema,
+  contacts: z.array(z.string().max(250)).max(500),
+  crawl: z.object({
+    pages: z.partialRecord(countryCode, z.number().int().min(0).max(30)),
+    urls: z.array(z.string().max(500)).max(600),
+  }),
 });
 
 const TEN_MINUTES = 10 * 60 * 1000;

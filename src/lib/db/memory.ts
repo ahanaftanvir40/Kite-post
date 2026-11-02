@@ -1,6 +1,7 @@
 import {
   keyOf,
   LIMITS,
+  mergeStudySearch,
   STARTER_WORKSPACE_NAME,
   StoreConflictError,
   StoreLastWorkspaceError,
@@ -13,6 +14,7 @@ import {
   type RunSummary,
   type SenderRecord,
   type Store,
+  type StudySearchRecord,
   type TemplateRecord,
   type UserRecord,
   type WorkspaceSummary,
@@ -37,6 +39,9 @@ export function createMemoryStore(now: () => Date = () => new Date()): Store {
 
   const users = new Map<string, UserRecord>();
   const connections = new Map<string, ConnectionRecord>();
+  const leadRuns = new Map<string, number>();
+  /** Oldest first, so the front is what goes when an owner is over the cap. */
+  const studySearches: Stamped<StudySearchRecord>[] = [];
   const workspaces: WorkspaceRow[] = [];
   const templates: Inside<TemplateRecord>[] = [];
   const lists: Inside<RecipientListRecord>[] = [];
@@ -284,6 +289,33 @@ export function createMemoryStore(now: () => Date = () => new Date()): Store {
       return messages
         .filter((m) => m.owner === owner && m.workspaceId === workspaceId && m.runId === runId)
         .map((m) => m.record);
+    },
+    async consumeLeadRun(owner, limit) {
+      const used = leadRuns.get(owner) ?? 0;
+      if (used >= limit) return false;
+      leadRuns.set(owner, used + 1);
+      return true;
+    },
+    async getLeadRuns(owner) {
+      return leadRuns.get(owner) ?? 0;
+    },
+    async saveStudySearch(owner, input) {
+      const before = studySearches.find((s) => s.owner === owner && s.value.key === input.key)?.value;
+      const record: StudySearchRecord = { ...input, ...mergeStudySearch(before ?? null, input), lastDownloadedAt: stamp() };
+      const i = studySearches.findIndex((s) => s.owner === owner && s.value.key === input.key);
+      if (i >= 0) studySearches.splice(i, 1);
+      studySearches.push({ owner, key: input.key, value: record });
+      const mineNow = mine(studySearches, owner);
+      for (const old of mineNow.slice(0, Math.max(0, mineNow.length - LIMITS.studySearches))) studySearches.splice(studySearches.indexOf(old), 1);
+      return record;
+    },
+    async getStudySearch(owner, key) {
+      return studySearches.find((s) => s.owner === owner && s.key === key)?.value ?? null;
+    },
+    async listStudySearches(owner) {
+      return mine(studySearches, owner)
+        .map((s) => s.value)
+        .reverse();
     },
   };
 }
