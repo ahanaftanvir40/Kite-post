@@ -1,9 +1,10 @@
-import type { CSSProperties, ReactNode } from "react";
-import { KiteFacets, KiteGlyph } from "@/components/brand/KiteMark";
+import type { ReactNode } from "react";
+import { KiteFacets } from "@/components/brand/KiteMark";
+import { Stamp } from "./Stamp";
 
 /**
  * The hero object: an open envelope, a letter rising out of it, and a kite
- * seal where the pocket folds meet.
+ * seal where the pocket folds meet. The letter carries its own postage stamp.
  *
  * One 640 x 520 grid (y runs -170..350; the pocket spans y 0..350, the open
  * flap sits above it). Layers, back to front: flap, inside, letter, pocket.
@@ -24,12 +25,14 @@ const CORAL_DEEP = "#DB4421";
 // Square top corners so the flap's base sits flush; only the bottom corners are rounded.
 const BODY_PATH = "M0 0 H640 V336 Q640 350 626 350 H14 Q0 350 0 336 Z";
 
-const STAMP_STYLE = { "--d": "8px", "--r": "2.4px" } as CSSProperties;
 const TOKEN =
   "inline-block rounded-[0.7cqw] bg-[#E6EAFE] px-[1.3cqw] py-[0.15cqw] text-kite-cobalt";
 
-/** `letter` replaces the default mail-merge demo text; it is laid out inside the same sheet of paper. */
-export function Envelope({ className = "", letter }: { className?: string; letter?: ReactNode }) {
+/**
+ * `letter` replaces the default mail-merge demo text and `stamp` replaces the postage stamp in the corner.
+ * Both are laid out inside the same sheet of paper.
+ */
+export function Envelope({ className = "", letter, stamp }: { className?: string; letter?: ReactNode; stamp?: ReactNode }) {
   return (
     <div className={`envelope relative aspect-[640/520] w-full [container-type:inline-size] ${className}`}>
       {/* The open flap. It swings up from behind the pocket on entrance. */}
@@ -48,13 +51,7 @@ export function Envelope({ className = "", letter }: { className?: string; lette
       {/* The letter. The wrapper hides it while it is tucked inside. */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="envelope-letter absolute left-[8.75%] right-[8.75%] top-[4.5%] h-[78.2%] rounded-[1.3cqw] bg-white pl-[5.5cqw] pr-[17cqw] pt-[5cqw] text-kite-ink will-change-transform">
-          <div
-            aria-hidden
-            style={STAMP_STYLE}
-            className="stamp-edge absolute right-[4.6cqw] top-[4.4cqw] aspect-[4/5] w-[9.2cqw] bg-[#FCE3DA] p-[1.5cqw]"
-          >
-            <KiteGlyph className="size-full" />
-          </div>
+          {stamp ?? <Stamp className="absolute right-[3.6cqw] top-[3.6cqw] aspect-[4/5] w-[11.6cqw]" />}
           {letter ?? (
             <>
               <p className="font-display text-[4.6cqw] font-semibold leading-tight tracking-[-0.02em]">

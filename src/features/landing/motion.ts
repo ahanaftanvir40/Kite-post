@@ -66,7 +66,9 @@ export function useHeroMotion(scope: RefObject<HTMLElement | null>) {
         .from(q(".hero-envelope"), { yPercent: 45, duration: 1.2 }, 0.35)
         .from(q(".envelope-flap"), { rotationX: 180, duration: 1, ease: "power3.inOut" }, 0.95)
         .set(q(".envelope-flap"), { zIndex: 0 }, 1.4)
-        .from(q(".envelope-letter"), { yPercent: 95, duration: 1.1, ease: "back.out(1.1)" }, 1.25);
+        .from(q(".envelope-letter"), { yPercent: 95, duration: 1.1, ease: "back.out(1.1)" }, 1.25)
+        // The postage: pressed onto the letter.
+        .from(q(".stamp-paper"), { autoAlpha: 0, scale: 1.5, transformOrigin: "50% 50%", duration: 0.3, ease: "power3.in" }, 2.15);
 
       // The flanks: blobs and flowers pop in around the copy, then drift and turn very slowly.
       const blooms = q(".hero-bloom");
