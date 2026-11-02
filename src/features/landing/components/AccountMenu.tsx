@@ -27,8 +27,8 @@ export function AccountMenu({ name, inApp = false }: AccountMenuProps) {
 
   if (inApp) {
     return (
-      <div className="flex items-center gap-2 sm:gap-3">
-        <span className="flex h-11 max-w-56 items-center gap-2.5 rounded-full border border-line-strong bg-sheet py-0 pl-1.5 pr-4 text-sm font-medium text-kite-ink">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <span className="flex h-11 max-w-56 shrink-0 items-center gap-2.5 rounded-full border border-line-strong bg-sheet py-0 pl-1.5 pr-4 text-sm font-medium text-kite-ink">
           <Avatar initial={initial} />
           <span className="sr-only">Signed in as </span>
           <span className="hidden truncate sm:inline">{name}</span>
@@ -43,11 +43,13 @@ export function AccountMenu({ name, inApp = false }: AccountMenuProps) {
   }
 
   return (
-    <div className="flex items-center gap-3">
-      <Avatar initial={initial} />
+    <div className="flex items-center gap-3 max-sm:gap-1.5">
+      <span className="max-[24rem]:hidden">
+        <Avatar initial={initial} />
+      </span>
       <span className="sr-only">Signed in as {name}</span>
       <form action={signOutAction}>
-        <button type="submit" className="cursor-pointer rounded-full px-3 py-2 text-sm font-medium text-ink-2 transition-colors hover:text-kite-ink">
+        <button type="submit" className="inline-flex h-11 cursor-pointer items-center whitespace-nowrap rounded-full px-3 text-sm font-medium text-ink-2 transition-colors hover:text-kite-ink">
           Sign out
         </button>
       </form>

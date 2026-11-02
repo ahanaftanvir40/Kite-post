@@ -32,7 +32,7 @@ export function Hero() {
   return (
     <section ref={root} aria-labelledby="hero-title" className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <HeroBlooms />
-      <div className="hero-copy relative z-10 mx-auto flex max-w-[70rem] flex-col items-center px-5 pt-8 text-center sm:px-8 sm:pt-[clamp(6.5rem,12vh,9rem)] laptop:pt-5">
+      <div className="hero-copy relative z-10 mx-auto flex max-w-[70rem] flex-col items-center max-sm:flex-1 max-sm:justify-center px-5 pt-8 text-center sm:px-8 sm:pt-[clamp(6.5rem,12vh,9rem)] laptop:pt-5">
         <h1
           id="hero-title"
           className="font-display text-balance text-[clamp(2.6rem,6.4vw,5rem)] laptop:text-[clamp(2.4rem,4.7vw,3.6rem)] font-semibold leading-[0.98] tracking-[-0.035em] text-kite-ink"
@@ -55,8 +55,8 @@ export function Hero() {
           </span>
           .
         </h1>
-        <p className="hero-fade mt-5 laptop:mt-4 max-w-xl text-balance text-lg leading-relaxed text-ink-2 sm:text-xl laptop:text-lg">
-          Find customers, or professors to write to. Then send them all a personal email at once, from any email address you own.
+        <p className="hero-fade mt-5 laptop:mt-4 max-w-xl text-balance text-lg max-sm:text-base leading-relaxed text-ink-2 sm:text-xl laptop:text-lg">
+          Find customers, or professors to write to. Then send them all a personal email at once.
         </p>
         <p className="hero-fade mt-8 laptop:mt-6 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-full border border-line bg-white/70 px-4 py-1.5 text-sm text-ink-3">
           <span>Gmail&rsquo;s mail merge can&rsquo;t send as an alias.</span>
@@ -74,7 +74,7 @@ export function Hero() {
         </div>
       </div>
 
-      <div className="hero-stage relative min-h-0 flex-1 [container-type:size]">
+      <div className="hero-stage relative min-h-0 flex-1 [container-type:size] max-sm:h-[calc(62.4vw+1.5rem)] max-sm:shrink-0 max-sm:flex-none">
         <div
           aria-hidden
           className="hero-arch absolute inset-x-0 bottom-0 top-[42%] overflow-hidden bg-kite-cobalt"

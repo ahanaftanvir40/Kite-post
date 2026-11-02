@@ -3,7 +3,7 @@ import { KiteGlyph } from "@/components/brand/KiteMark";
 const SIZE = {
   md: { glyph: "h-7", name: "text-[1.45rem]", gap: "gap-2.5" },
   /** The navbar size, used on every page so the brand never changes scale between them. */
-  lg: { glyph: "h-9", name: "text-[1.85rem]", gap: "gap-3" },
+  lg: { glyph: "h-9 max-sm:h-7", name: "text-[1.85rem] max-sm:text-[1.45rem]", gap: "gap-3 max-sm:gap-2.5" },
 } as const;
 
 /** Kite glyph plus the Kitepost name, set in the display face. */
