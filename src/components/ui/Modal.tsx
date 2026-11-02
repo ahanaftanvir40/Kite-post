@@ -68,7 +68,7 @@ export function Modal({ title, onClose, wide = false, children }: ModalProps) {
         aria-modal="true"
         aria-labelledby={titleId}
         onKeyDown={onKeyDown}
-        className={`max-h-[calc(100dvh-2rem)] w-full overflow-auto rounded-2xl border border-line bg-sheet p-6 shadow-lift ${wide ? "max-w-3xl" : "max-w-md"}`}
+        className={`max-h-[calc(100dvh-2rem)] w-full overflow-auto rounded-2xl border border-line bg-sheet p-6 max-sm:p-4 shadow-lift ${wide ? "max-w-3xl" : "max-w-md"}`}
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <h2 id={titleId} className="font-display text-lg font-semibold tracking-[-0.02em]">
@@ -78,7 +78,7 @@ export function Modal({ title, onClose, wide = false, children }: ModalProps) {
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-stamp text-ink-3 hover:bg-sunk hover:text-ink"
+            className="grid size-8 max-sm:size-11 max-sm:-mr-2 max-sm:-mt-2 shrink-0 cursor-pointer place-items-center rounded-stamp text-ink-3 hover:bg-sunk hover:text-ink"
           >
             <X className="size-4" aria-hidden />
           </button>

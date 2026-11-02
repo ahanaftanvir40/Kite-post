@@ -17,7 +17,7 @@ export function Navbar({ inApp = false }: { inApp?: boolean }) {
   return (
     <header className="relative z-20">
       <nav aria-label="Main" className="mx-auto flex h-20 laptop:h-16 max-w-6xl items-center justify-between gap-3 px-5 sm:px-8">
-        <Link href="/" aria-label="Kitepost home" className="shrink-0 rounded-md">
+        <Link href="/" aria-label="Kitepost home" className="shrink-0 rounded-md max-sm:py-2.5">
           <Wordmark size="lg" />
         </Link>
         <Suspense

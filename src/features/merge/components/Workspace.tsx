@@ -19,6 +19,9 @@ const SIDE_VIEWS: { id: Exclude<StepId, FlowStepId>; label: string }[] = [
   { id: "history", label: "History" },
 ];
 
+/** Shorter step names for phones, where the pills share two rows. */
+const SHORT_LABELS: Partial<Record<FlowStepId, string>> = { send: "Review" };
+
 function Panel({ step }: { step: StepId }) {
   switch (step) {
     case "connect":
@@ -69,10 +72,10 @@ export function Workspace() {
   return (
     <div className="flex flex-1 flex-col">
       <header ref={header} className="border-b border-line bg-sheet">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-2 px-4 pb-5 pt-10 sm:px-6 sm:pt-14">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-2 px-4 pb-5 pt-10 max-sm:pt-6 sm:px-6 sm:pt-14">
           <h1 className="sr-only">Kitepost workspace</h1>
-          <nav aria-label="Steps" className="brand-in -mx-1 max-w-full overflow-x-auto px-1">
-            <ol className="flex w-max items-center gap-1.5">
+          <nav aria-label="Steps" className="brand-in -mx-1 max-w-full overflow-x-auto px-1 max-sm:-mx-2 max-sm:w-[calc(100%+1rem)] max-sm:max-w-none max-sm:overflow-visible max-sm:px-0">
+            <ol className="flex w-max items-center gap-1.5 max-sm:w-full max-sm:flex-wrap max-sm:justify-center max-sm:gap-x-1 max-sm:gap-y-1.5">
               {STEPS.map((s, i) => {
                 const active = s.id === step;
                 const done = i < current;
@@ -82,23 +85,32 @@ export function Workspace() {
                       type="button"
                       aria-current={active ? "step" : undefined}
                       onClick={() => setStep(s.id)}
-                      className={`group inline-flex h-10 cursor-pointer items-center gap-2 rounded-full pl-2 pr-4 text-sm transition-colors duration-200 ${
-                        active ? "bg-kite-ink font-medium text-white" : "text-ink-2 hover:bg-sunk hover:text-ink"
+                      className={`group inline-flex h-10 cursor-pointer items-center gap-2 rounded-full pl-2 pr-4 text-sm transition-colors duration-200 max-sm:h-11 max-sm:gap-1.5 max-sm:pr-3 max-sm:text-[13px] ${
+                        active ? "bg-kite-ink font-medium text-white" : "text-ink-2 hover:bg-sunk hover:text-ink max-sm:px-2.5"
                       }`}
                     >
                       <span
-                        className={`grid size-6 place-items-center rounded-full text-xs font-semibold tnum transition-colors duration-200 ${
+                        className={`grid size-6 place-items-center rounded-full text-xs font-semibold tnum transition-colors duration-200 ${active ? "" : "max-sm:sr-only"} ${
                           active ? "bg-kite-coral text-white" : done ? "bg-postal-wash text-postal-deep" : "bg-sunk text-ink-3 group-hover:bg-sheet"
                         }`}
                       >
                         {i + 1}
                       </span>
-                      {s.label}
+                      {SHORT_LABELS[s.id] ? (
+                        <>
+                          <span className="max-sm:sr-only">{s.label}</span>
+                          <span className="sm:hidden" aria-hidden>
+                            {SHORT_LABELS[s.id]}
+                          </span>
+                        </>
+                      ) : (
+                        s.label
+                      )}
                     </button>
                   </li>
                 );
               })}
-              <li className="ml-2 flex gap-1 border-l border-line pl-3">
+              <li className="ml-2 flex gap-1 border-l border-line pl-3 max-sm:ml-0 max-sm:mt-1 max-sm:basis-full max-sm:justify-center max-sm:gap-1.5 max-sm:border-l-0 max-sm:border-t max-sm:pl-0 max-sm:pt-1.5">
                 {SIDE_VIEWS.map((v) => {
                   const active = step === v.id;
                   return (
@@ -107,7 +119,7 @@ export function Workspace() {
                       type="button"
                       aria-current={active ? "page" : undefined}
                       onClick={() => setStep(v.id)}
-                      className={`inline-flex h-10 cursor-pointer items-center rounded-full px-4 text-sm transition-colors duration-200 ${
+                      className={`inline-flex h-10 max-sm:h-11 cursor-pointer items-center rounded-full px-4 text-sm transition-colors duration-200 ${
                         active ? "bg-kite-ink font-medium text-white" : "text-ink-2 hover:bg-sunk hover:text-ink"
                       }`}
                     >
@@ -124,7 +136,7 @@ export function Workspace() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 max-sm:py-5 sm:px-6">
         <div ref={stage}>
           <Panel step={step} />
         </div>

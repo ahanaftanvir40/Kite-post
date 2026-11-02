@@ -76,7 +76,7 @@ export function LeadFinder() {
         Describe what you sell and where. We find local businesses that could use it, look for a public email on each website, and give you an Excel file.
       </p>
 
-      <form onSubmit={(e) => void submit(e)} className="mt-6 grid gap-4 rounded-2xl border border-line bg-sheet p-5 md:grid-cols-2">
+      <form onSubmit={(e) => void submit(e)} className="mt-6 grid gap-4 rounded-2xl border border-line bg-sheet p-5 max-sm:p-4 md:grid-cols-2">
         <div className="md:col-span-2">
           <label htmlFor="lead-description" className="mb-1 block text-sm font-medium text-ink">
             What does your business sell?

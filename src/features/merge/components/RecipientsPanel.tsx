@@ -110,7 +110,7 @@ export function RecipientsPanel() {
             onDrop={onDrop}
             className={`mt-5 rounded-2xl border-2 border-dashed p-1.5 transition-colors duration-200 ${dragging ? "border-postal bg-postal-wash" : "border-line-strong bg-sheet"}`}
           >
-            <div className="grid place-items-center gap-3 px-6 py-12 text-center">
+            <div className="grid place-items-center gap-3 px-6 py-12 text-center max-sm:px-4 max-sm:py-8">
               <span className="grid size-14 place-items-center rounded-full bg-postal-wash text-postal">
                 <FileSpreadsheet className="size-7" aria-hidden />
               </span>
@@ -143,7 +143,7 @@ export function RecipientsPanel() {
           <button
             type="button"
             onClick={downloadSample}
-            className="mt-4 inline-flex cursor-pointer items-center gap-1.5 text-sm text-postal underline hover:text-postal-deep"
+            className="mt-4 inline-flex cursor-pointer items-center gap-1.5 text-sm max-sm:py-3 text-postal underline hover:text-postal-deep"
           >
             <Download className="size-4" aria-hidden /> Download a sample file
           </button>
@@ -158,7 +158,7 @@ export function RecipientsPanel() {
               <button
                 type="button"
                 onClick={store.clearWorkbook}
-                className="-ml-1 mb-2 inline-flex cursor-pointer items-center gap-1.5 rounded-stamp px-1 py-0.5 text-sm text-ink-2 transition-colors hover:text-ink"
+                className="-ml-1 mb-2 inline-flex cursor-pointer items-center gap-1.5 rounded-stamp px-1 py-0.5 max-sm:py-3 text-sm text-ink-2 transition-colors hover:text-ink"
               >
                 <ArrowLeft className="size-4" aria-hidden /> Back to recipients
               </button>
@@ -176,10 +176,10 @@ export function RecipientsPanel() {
               </p>
             </div>
 
-            <label className="text-sm">
+            <label className="text-sm max-sm:w-full">
               <span className="mb-1 block font-medium">Email column</span>
               <Select
-                className="w-48"
+                className="w-48 max-sm:w-full"
                 aria-label="Email column"
                 value={emailColumn ?? ""}
                 onChange={store.setEmailColumn}
@@ -283,7 +283,7 @@ export function RecipientsPanel() {
                           <td className="px-3 py-1.5">
                             <input
                               type="checkbox"
-                              className="size-4 cursor-pointer accent-postal disabled:cursor-not-allowed"
+                              className="size-4 max-sm:size-5 cursor-pointer accent-postal disabled:cursor-not-allowed"
                               checked={!out}
                               disabled={blocked}
                               onChange={() => store.toggleExcluded(r.id)}
@@ -311,7 +311,7 @@ export function RecipientsPanel() {
                               type="button"
                               aria-label={`Remove ${r.email || `row ${position + 1}`}`}
                               onClick={() => store.removeRows([r.id])}
-                              className="grid size-7 cursor-pointer place-items-center rounded-stamp text-ink-3 hover:bg-failed-wash hover:text-failed"
+                              className="grid size-7 max-sm:size-10 cursor-pointer place-items-center rounded-stamp text-ink-3 hover:bg-failed-wash hover:text-failed"
                             >
                               <Trash2 className="size-4" aria-hidden />
                             </button>

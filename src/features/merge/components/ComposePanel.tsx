@@ -159,7 +159,7 @@ export function ComposePanel() {
       aria-pressed={on}
       onMouseDown={(e) => e.preventDefault()}
       onClick={run}
-      className={`grid size-8 cursor-pointer place-items-center rounded-stamp ${on ? "bg-postal-wash text-postal-deep" : "text-ink-2 hover:bg-sunk"}`}
+      className={`grid size-8 max-sm:size-11 cursor-pointer place-items-center rounded-stamp ${on ? "bg-postal-wash text-postal-deep" : "text-ink-2 hover:bg-sunk"}`}
     >
       {icon}
     </button>
@@ -216,7 +216,7 @@ export function ComposePanel() {
           {source ? (
             <textarea
               aria-labelledby="body-label"
-              className="block min-h-60 w-full resize-y bg-transparent font-mono text-[13px] leading-relaxed outline-none"
+              className="block min-h-60 w-full resize-y bg-transparent font-mono text-[13px] max-sm:text-base leading-relaxed outline-none"
               value={body}
               onChange={(e) => store.setBody(e.target.value)}
               spellCheck={false}
@@ -230,7 +230,7 @@ export function ComposePanel() {
               role="listbox"
               aria-label="Columns"
               style={{ left: menu.left, top: menu.top }}
-              className="absolute z-20 w-60 overflow-hidden rounded-stamp border border-line-strong bg-sheet py-1 shadow-lift"
+              className="absolute z-20 w-60 max-sm:left-0! max-sm:right-0 max-sm:w-auto overflow-hidden rounded-stamp border border-line-strong bg-sheet py-1 shadow-lift"
             >
               {options.slice(0, 8).map((o, i) => (
                 <li

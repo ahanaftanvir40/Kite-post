@@ -121,6 +121,12 @@ a {
   outline: none;
   line-height: 1.6;
 }
+/* Phones: 16px so iOS does not zoom the page when the editor is focused. */
+@media (max-width: 639px) {
+  .ProseMirror {
+    font-size: 16px;
+  }
+}
 .ProseMirror p {
   margin: 0 0 0.85em;
 }

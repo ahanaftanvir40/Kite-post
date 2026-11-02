@@ -33,9 +33,9 @@ export function StatusBar() {
     <footer className="sticky bottom-0 z-10 border-t border-line bg-sheet/95 backdrop-blur-sm">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
         <dl className="flex min-w-0 flex-1 flex-wrap gap-x-6 gap-y-1 text-sm">
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 max-sm:min-w-0">
             <dt className="text-ink-3">Mailbox</dt>
-            <dd className="font-medium text-ink">{session?.connected ? profile?.user : "Not connected"}</dd>
+            <dd className="font-medium text-ink max-sm:truncate">{session?.connected ? profile?.user : "Not connected"}</dd>
           </div>
           {session?.connected && profile ? (
             <div className="flex min-w-0 gap-1.5">

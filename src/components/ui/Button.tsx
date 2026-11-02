@@ -25,7 +25,7 @@ export function Button({ variant = "secondary", loading = false, icon, children,
       {...rest}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed ${VARIANT[variant]} ${className}`}
+      className={`inline-flex h-9 max-sm:h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed ${VARIANT[variant]} ${className}`}
     >
       {loading ? <LoaderCircle aria-hidden className="size-4 animate-spin" /> : icon}
       {children}

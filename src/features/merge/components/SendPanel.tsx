@@ -145,7 +145,7 @@ export function SendPanel() {
   const idle = run.status === "idle";
 
   return (
-    <div ref={root} className="grid gap-8 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+    <div ref={root} className="grid gap-8 max-sm:grid-cols-[minmax(0,1fr)] xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
       <div className="space-y-6">
         <section aria-labelledby="check-title">
           <h2 id="check-title" className="font-display text-2xl font-semibold tracking-[-0.025em]">

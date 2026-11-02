@@ -179,7 +179,7 @@ export function ConnectPanel() {
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Hide app password" : "Show app password"}
                   aria-pressed={showPassword}
-                  className="grid size-8 cursor-pointer place-items-center rounded-stamp text-ink-3 hover:bg-sunk hover:text-ink"
+                  className="grid size-8 max-sm:size-11 cursor-pointer place-items-center rounded-stamp text-ink-3 hover:bg-sunk hover:text-ink"
                 >
                   {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
                 </button>

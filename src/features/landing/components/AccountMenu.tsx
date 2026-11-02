@@ -28,7 +28,7 @@ export function AccountMenu({ name, inApp = false }: AccountMenuProps) {
   if (inApp) {
     return (
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-        <span className="flex h-11 max-w-56 shrink-0 items-center gap-2.5 rounded-full border border-line-strong bg-sheet py-0 pl-1.5 pr-4 text-sm font-medium text-kite-ink">
+        <span className="flex h-11 max-w-56 shrink-0 items-center gap-2.5 rounded-full border border-line-strong bg-sheet py-0 pl-1.5 pr-4 text-sm font-medium text-kite-ink max-sm:w-11 max-sm:justify-center max-sm:border-transparent max-sm:bg-transparent max-sm:p-0">
           <Avatar initial={initial} />
           <span className="sr-only">Signed in as </span>
           <span className="hidden truncate sm:inline">{name}</span>

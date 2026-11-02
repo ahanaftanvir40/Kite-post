@@ -95,7 +95,7 @@ function WorkspaceCard({ workspace, active, busy, onlyOne, onOpen, onRename, onD
       ) : (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <FolderOpen className={`size-5 shrink-0 ${active ? "text-postal" : "text-ink-3"}`} aria-hidden />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 max-sm:min-w-[12rem]">
             <p className="flex items-center gap-2 text-sm font-medium">
               <span className="truncate">{workspace.name}</span>
               {active ? <Badge tone="postal">Current</Badge> : null}
@@ -124,7 +124,7 @@ function WorkspaceCard({ workspace, active, busy, onlyOne, onOpen, onRename, onD
                   setMode("rename");
                 }}
                 disabled={busy}
-                className="grid size-8 cursor-pointer place-items-center rounded-stamp text-ink-3 hover:bg-sunk hover:text-ink disabled:cursor-not-allowed"
+                className="grid size-8 max-sm:size-11 cursor-pointer place-items-center rounded-stamp text-ink-3 hover:bg-sunk hover:text-ink disabled:cursor-not-allowed"
               >
                 <Pencil className="size-4" aria-hidden />
               </button>
@@ -137,7 +137,7 @@ function WorkspaceCard({ workspace, active, busy, onlyOne, onOpen, onRename, onD
                   setMode("delete");
                 }}
                 disabled={busy || onlyOne}
-                className="grid size-8 cursor-pointer place-items-center rounded-stamp text-ink-3 hover:bg-failed-wash hover:text-failed disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-3"
+                className="grid size-8 max-sm:size-11 cursor-pointer place-items-center rounded-stamp text-ink-3 hover:bg-failed-wash hover:text-failed disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-3"
               >
                 <Trash2 className="size-4" aria-hidden />
               </button>

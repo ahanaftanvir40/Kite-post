@@ -10,7 +10,8 @@ export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
 }
 
 export const inputClass =
-  "h-10 w-full rounded-stamp border border-line-strong bg-sheet px-3 text-sm text-ink transition-colors duration-150 hover:border-ink-3 outline-none focus:border-postal focus-visible:outline-none disabled:bg-sunk disabled:text-ink-3 aria-[invalid=true]:border-failed";
+  // On phones: a 44px field, and 16px text so iOS does not zoom the page when it is focused.
+  "h-10 max-sm:h-11 w-full rounded-stamp border border-line-strong bg-sheet px-3 text-sm max-sm:text-base text-ink transition-colors duration-150 hover:border-ink-3 outline-none focus:border-postal focus-visible:outline-none disabled:bg-sunk disabled:text-ink-3 aria-[invalid=true]:border-failed";
 
 export function TextField({ label, hint, error, trailing, mono, className = "", ...rest }: TextFieldProps) {
   const id = useId();
@@ -30,7 +31,7 @@ export function TextField({ label, hint, error, trailing, mono, className = "", 
           aria-describedby={describedBy}
           className={`${inputClass} ${mono ? "font-mono" : ""} ${trailing ? "pr-11" : ""}`}
         />
-        {trailing ? <div className="absolute inset-y-0 right-1 flex items-center">{trailing}</div> : null}
+        {trailing ? <div className="absolute inset-y-0 right-1 max-sm:right-0 flex items-center">{trailing}</div> : null}
       </div>
       {hint ? (
         <p id={hintId} className="mt-1 text-[13px] leading-snug text-ink-3">

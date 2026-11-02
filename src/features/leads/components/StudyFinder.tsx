@@ -144,7 +144,7 @@ export function StudyFinder() {
         Find the people to write to when you want to study overseas: professors in your field, admissions offices and funding offices, with their public university email. Download an Excel file and send personal emails with the email merger.
       </p>
 
-      <form onSubmit={(e) => void submit(e)} className="mt-6 grid gap-4 rounded-2xl border border-line bg-sheet p-5 md:grid-cols-2">
+      <form onSubmit={(e) => void submit(e)} className="mt-6 grid gap-4 rounded-2xl border border-line bg-sheet p-5 max-sm:p-4 md:grid-cols-2">
         <div className="md:col-span-2">
           <span className="mb-1 block text-sm font-medium text-ink">Who do you want to contact?</span>
           <div role="radiogroup" aria-label="Who to contact" className="flex flex-wrap gap-2">
@@ -155,7 +155,7 @@ export function StudyFinder() {
                 role="radio"
                 aria-checked={kind === k.value}
                 onClick={() => setKind(k.value)}
-                className={`h-9 cursor-pointer rounded-full border px-4 text-sm transition-colors duration-200 ${
+                className={`h-9 max-sm:h-11 cursor-pointer rounded-full border px-4 text-sm transition-colors duration-200 ${
                   kind === k.value ? "border-kite-coral bg-sunk font-medium text-ink" : "border-line text-ink-2 hover:text-ink"
                 }`}
               >
@@ -190,7 +190,7 @@ export function StudyFinder() {
                   type="button"
                   aria-pressed={on}
                   onClick={() => toggleCountry(c.code)}
-                  className={`h-8 cursor-pointer rounded-full border px-3 text-[13px] transition-colors duration-200 ${
+                  className={`h-8 max-sm:h-10 cursor-pointer rounded-full border px-3 text-[13px] transition-colors duration-200 ${
                     on ? "border-kite-coral bg-sunk font-medium text-ink" : "border-line text-ink-2 hover:text-ink"
                   }`}
                 >
@@ -305,7 +305,7 @@ export function StudyFinder() {
               const s = COUNTRY_BY_CODE.get(c.code)?.scholarship;
               return s ? (
                 <li key={c.code}>
-                  <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-postal hover:underline">
+                  <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-postal hover:underline max-sm:inline-block max-sm:py-2">
                     {s.name}
                   </a>
                   <span className="text-ink-3"> ({c.name})</span>
@@ -314,7 +314,7 @@ export function StudyFinder() {
             })}
             {GENERAL_RESOURCES.map((r) => (
               <li key={r.url}>
-                <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-postal hover:underline">
+                <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-postal hover:underline max-sm:inline-block max-sm:py-2">
                   {r.name}
                 </a>
                 <span className="text-ink-3">: {r.note}</span>

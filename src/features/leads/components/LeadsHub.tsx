@@ -24,7 +24,7 @@ export function LeadsHub() {
             role="radio"
             aria-checked={section === s.id}
             onClick={() => setSection(s.id)}
-            className={`h-9 cursor-pointer rounded-full border px-4 text-sm transition-colors duration-200 ${
+            className={`h-9 max-sm:h-11 cursor-pointer rounded-full border px-4 text-sm transition-colors duration-200 ${
               section === s.id ? "border-kite-coral bg-sunk font-medium text-ink" : "border-line text-ink-2 hover:text-ink"
             }`}
           >

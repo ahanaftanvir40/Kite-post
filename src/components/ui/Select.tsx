@@ -25,8 +25,8 @@ export interface SelectProps {
 }
 
 const SHAPE: Record<Variant, string> = {
-  field: "h-10 rounded-stamp pl-3 pr-9",
-  pill: "h-9 rounded-full pl-4 pr-9 font-medium",
+  field: "h-10 max-sm:h-11 rounded-stamp pl-3 pr-9",
+  pill: "h-9 max-sm:h-11 rounded-full pl-4 pr-9 font-medium",
 };
 
 const MENU_MAX_HEIGHT = 256;

@@ -27,8 +27,8 @@ interface RowProps {
 export function SavedRow({ title, meta, actionLabel, onAction, deleteLabel, onDelete, busy, badge, quietAction, extra, confirmNote }: RowProps) {
   const [confirming, setConfirming] = useState(false);
   return (
-    <li className="flex items-center gap-3 px-4 py-3">
-      <div className="min-w-0 flex-1">
+    <li className="flex items-center gap-3 px-4 py-3 max-sm:flex-wrap max-sm:gap-y-2">
+      <div className="min-w-0 flex-1 max-sm:basis-full">
         <p className="flex items-center gap-2 text-sm font-medium">
           <span className="truncate" title={title}>
             {title}
@@ -68,7 +68,7 @@ export function SavedRow({ title, meta, actionLabel, onAction, deleteLabel, onDe
               title={extra.hint ?? extra.label}
               onClick={extra.onClick}
               disabled={busy}
-              className="grid size-8 cursor-pointer place-items-center rounded-stamp text-ink-3 transition-colors hover:bg-sent-wash hover:text-sent disabled:cursor-not-allowed"
+              className="grid size-8 max-sm:size-11 cursor-pointer place-items-center rounded-stamp text-ink-3 transition-colors hover:bg-sent-wash hover:text-sent disabled:cursor-not-allowed"
             >
               {extra.icon}
             </button>
@@ -78,7 +78,7 @@ export function SavedRow({ title, meta, actionLabel, onAction, deleteLabel, onDe
             aria-label={deleteLabel}
             onClick={() => setConfirming(true)}
             disabled={busy}
-            className="grid size-8 cursor-pointer place-items-center rounded-stamp text-ink-3 hover:bg-failed-wash hover:text-failed disabled:cursor-not-allowed"
+            className="grid size-8 max-sm:size-11 cursor-pointer place-items-center rounded-stamp text-ink-3 hover:bg-failed-wash hover:text-failed disabled:cursor-not-allowed"
           >
             <Trash2 className="size-4" aria-hidden />
           </button>

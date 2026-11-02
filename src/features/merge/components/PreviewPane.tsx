@@ -44,17 +44,17 @@ export function PreviewPane({ rows, from, replyTo, hideTitle = false, frameClass
   const step = (delta: number) => setPreviewId(rows[stepIndex(index, delta, rows.length)].recipient.id);
 
   return (
-    <section aria-labelledby="preview-title">
+    <section aria-labelledby="preview-title" className="max-sm:min-w-0">
       <div className={`flex flex-wrap items-center gap-3 ${hideTitle ? "justify-end" : "justify-between"}`}>
         <h3 id="preview-title" className={hideTitle ? "sr-only" : "font-display text-lg font-semibold tracking-[-0.02em]"}>
           Preview
         </h3>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 max-sm:w-full">
           <button
             type="button"
             aria-label="Previous recipient"
             onClick={() => step(-1)}
-            className="grid size-8 cursor-pointer place-items-center rounded-full border border-line-strong bg-sheet transition-colors hover:border-kite-ink"
+            className="grid size-8 max-sm:size-11 shrink-0 cursor-pointer place-items-center rounded-full border border-line-strong bg-sheet transition-colors hover:border-kite-ink"
           >
             <ChevronLeft className="size-4" aria-hidden />
           </button>
@@ -62,7 +62,7 @@ export function PreviewPane({ rows, from, replyTo, hideTitle = false, frameClass
             aria-label="Recipient"
             variant="pill"
             compact
-            className="w-56 max-w-56"
+            className="w-56 max-w-56 max-sm:min-w-0 max-sm:max-w-none max-sm:flex-1"
             value={current.recipient.id}
             onChange={setPreviewId}
             options={rows.map((r) => ({ value: r.recipient.id, label: r.recipient.email }))}
@@ -74,7 +74,7 @@ export function PreviewPane({ rows, from, replyTo, hideTitle = false, frameClass
             type="button"
             aria-label="Next recipient"
             onClick={() => step(1)}
-            className="grid size-8 cursor-pointer place-items-center rounded-full border border-line-strong bg-sheet transition-colors hover:border-kite-ink"
+            className="grid size-8 max-sm:size-11 shrink-0 cursor-pointer place-items-center rounded-full border border-line-strong bg-sheet transition-colors hover:border-kite-ink"
           >
             <ChevronRight className="size-4" aria-hidden />
           </button>

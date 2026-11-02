@@ -33,7 +33,7 @@ export function AppModes() {
                 aria-selected={active}
                 aria-controls={`mode-panel-${m.id}`}
                 onClick={() => setMode(m.id)}
-                className={`-mb-px inline-flex h-10 cursor-pointer items-center gap-2 border-b-2 px-4 text-sm transition-colors duration-200 ${
+                className={`-mb-px inline-flex h-10 max-sm:h-11 cursor-pointer items-center gap-2 border-b-2 px-4 text-sm transition-colors duration-200 ${
                   active ? "border-kite-coral font-medium text-ink" : "border-transparent text-ink-2 hover:text-ink"
                 }`}
               >
