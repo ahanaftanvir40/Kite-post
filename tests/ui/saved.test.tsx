@@ -170,6 +170,90 @@ describe("saved templates", () => {
   });
 });
 
+describe("links in the message", () => {
+  beforeEach(() => {
+    connect();
+    useMergeStore.getState().loadSample();
+    useMergeStore.getState().setBody("<p>Hello</p>");
+  });
+
+  it("adds a link with its own text, shows it in the editor, and stores it as an anchor", async () => {
+    const user = userEvent.setup();
+    render(<ComposePanel />);
+    await user.click(await screen.findByRole("button", { name: "Link (Ctrl+K)" }));
+    const card = screen.getByRole("dialog", { name: "Add link" });
+    await user.type(within(card).getByLabelText("Text to show"), "Pick up where you left off");
+    await user.type(within(card).getByLabelText("Link to"), "resumestart.ai/offer");
+    await user.click(within(card).getByRole("button", { name: "Add" }));
+    const link = await screen.findByRole("link", { name: "Pick up where you left off" });
+    expect(link).toHaveAttribute("href", "https://resumestart.ai/offer");
+    expect(useMergeStore.getState().body).toContain('href="https://resumestart.ai/offer"');
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("will not accept a script link", async () => {
+    const user = userEvent.setup();
+    render(<ComposePanel />);
+    await user.click(await screen.findByRole("button", { name: "Link (Ctrl+K)" }));
+    await user.type(screen.getByLabelText("Link to"), "javascript:alert(1)");
+    expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+  });
+
+  it("clicking a link shows where it goes, with open, edit and remove", async () => {
+    useMergeStore.getState().setBody('<p>Hi <a href="https://old.example/">there</a></p>');
+    const user = userEvent.setup();
+    render(<ComposePanel />);
+    await user.click(await screen.findByRole("link", { name: "there" }));
+    const card = await screen.findByRole("dialog", { name: "Link" });
+    const open = within(card).getByRole("link", { name: "Open link in a new tab" });
+    expect(open).toHaveAttribute("href", "https://old.example/");
+    expect(open).toHaveAttribute("target", "_blank");
+    expect(open).toHaveAttribute("rel", expect.stringContaining("noopener"));
+    expect(within(card).getByRole("button", { name: "Edit link" })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: "Remove link" })).toBeInTheDocument();
+  });
+
+  it("edits the address and the text of an existing link", async () => {
+    useMergeStore.getState().setBody('<p>Hi <a href="https://old.example/">there</a></p>');
+    const user = userEvent.setup();
+    render(<ComposePanel />);
+    await user.click(await screen.findByRole("link", { name: "there" }));
+    await user.click(within(await screen.findByRole("dialog", { name: "Link" })).getByRole("button", { name: "Edit link" }));
+    const card = screen.getByRole("dialog", { name: "Edit link" });
+    expect(within(card).getByLabelText("Link to")).toHaveValue("https://old.example/");
+    expect(within(card).getByLabelText("Text to show")).toHaveValue("there");
+    await user.clear(within(card).getByLabelText("Link to"));
+    await user.type(within(card).getByLabelText("Link to"), "new.example");
+    await user.clear(within(card).getByLabelText("Text to show"));
+    await user.type(within(card).getByLabelText("Text to show"), "friend");
+    await user.click(within(card).getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(useMergeStore.getState().body).toContain('href="https://new.example"'));
+    expect(useMergeStore.getState().body).toContain(">friend</a>");
+    expect(useMergeStore.getState().body).not.toContain("old.example");
+  });
+
+  it("removes a link but keeps its text", async () => {
+    useMergeStore.getState().setBody('<p>Hi <a href="https://old.example/">there</a></p>');
+    const user = userEvent.setup();
+    render(<ComposePanel />);
+    await user.click(await screen.findByRole("link", { name: "there" }));
+    await user.click(within(await screen.findByRole("dialog", { name: "Link" })).getByRole("button", { name: "Remove link" }));
+    await waitFor(() => expect(useMergeStore.getState().body).not.toContain("<a"));
+    expect(useMergeStore.getState().body).toContain("there");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("closes the card with Escape", async () => {
+    useMergeStore.getState().setBody('<p>Hi <a href="https://old.example/">there</a></p>');
+    const user = userEvent.setup();
+    render(<ComposePanel />);
+    await user.click(await screen.findByRole("link", { name: "there" }));
+    await user.click(within(await screen.findByRole("dialog", { name: "Link" })).getByRole("button", { name: "Edit link" }));
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
 describe("saved lists", () => {
   beforeEach(() => connect());
 

@@ -1,14 +1,15 @@
 "use client";
 
 import Placeholder from "@tiptap/extension-placeholder";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { EditorContent, getMarkRange, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Bold, Code, Eye, Italic, List } from "lucide-react";
+import { Bold, Code, ExternalLink, Eye, Italic, Link2, List, Pencil, Unlink } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { inputClass } from "@/components/ui/TextField";
 import { EASE_OUT, gsap, useMotion } from "@/lib/motion";
 import { analyze, fieldsFor } from "../compose";
+import { normalizeLinkUrl } from "../linkUrl";
 import { activeSheet, sendableRecipients, useMergeStore } from "../store";
 import { PreviewModal } from "./PreviewModal";
 import { SavedTemplates } from "./SavedTemplates";
@@ -24,6 +25,28 @@ interface Menu {
   query: string;
   left: number;
   top: number;
+}
+
+/** The small card under a link: read it (and open it), or edit it. */
+interface LinkCard {
+  mode: "view" | "edit";
+  href: string;
+  /** The text range the link covers, or the selection a new link will cover. May be empty. */
+  from: number;
+  to: number;
+  left: number;
+  top: number;
+}
+
+/** Where to hang a card under `pos`, relative to the editor frame. */
+function anchorFor(editor: Editor, frame: HTMLElement, pos: number): { left: number; top: number } {
+  try {
+    const coords = editor.view.coordsAtPos(pos);
+    const box = frame.getBoundingClientRect();
+    return { left: Math.max(0, coords.left - box.left), top: coords.bottom - box.top + 6 };
+  } catch {
+    return { left: 0, top: 36 };
+  }
 }
 
 export function ComposePanel() {
@@ -47,6 +70,13 @@ export function ComposePanel() {
   const frame = useRef<HTMLDivElement>(null);
   const options = menu ? filterFields(fields, menu.query) : [];
   const optionsRef = useRef<FieldOption[]>([]);
+  const [card, setCard] = useState<LinkCard | null>(null);
+  const [draftText, setDraftText] = useState("");
+  const [draftHref, setDraftHref] = useState("");
+  const cardEl = useRef<HTMLDivElement>(null);
+  const openLinkRef = useRef<() => void>(() => undefined);
+  const viewLinkRef = useRef<(pos: number) => boolean>(() => false);
+  const closeCardRef = useRef<() => void>(() => undefined);
 
   // TipTap's handlers outlive a render, so they read the latest values from
   // refs that are refreshed after every commit (never during render).
@@ -56,21 +86,48 @@ export function ComposePanel() {
     menuRef.current = menu;
     activeRef.current = active;
     optionsRef.current = options;
+    openLinkRef.current = openLink;
+    viewLinkRef.current = viewLinkAt;
+    closeCardRef.current = () => setCard(null);
   });
 
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ heading: false, blockquote: false, codeBlock: false, horizontalRule: false, strike: false }),
+      // A click on a link opens its card (open / edit / remove) instead of navigating away mid-edit.
+      StarterKit.configure({
+        heading: false,
+        blockquote: false,
+        codeBlock: false,
+        horizontalRule: false,
+        strike: false,
+        link: { openOnClick: false, defaultProtocol: "https" },
+      }),
       Placeholder.configure({ placeholder: "Write your message. Type @ to insert a column." }),
       // The getter runs inside ProseMirror transactions, not during render.
-      // eslint-disable-next-line react-hooks/refs
       createTokenHighlight(() => keysRef.current),
     ],
     content: body,
     editorProps: {
       attributes: { "aria-label": "Message body", role: "textbox", "aria-multiline": "true" },
+      handleDOMEvents: {
+        click: (view, event) => {
+          const anchor = (event.target as HTMLElement).closest("a");
+          // Position comes from the clicked element, so it holds wherever the link wraps.
+          const opened = anchor ? viewLinkRef.current(view.posAtDOM(anchor, 0) + 1) : false;
+          if (!opened) closeCardRef.current();
+          // Ctrl or Cmd plus click goes straight to the page, like in Gmail.
+          const href = anchor?.getAttribute("href");
+          if (opened && href && (event.metaKey || event.ctrlKey)) window.open(href, "_blank", "noopener,noreferrer");
+          return false;
+        },
+      },
       handleKeyDown: (_view, event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+          event.preventDefault();
+          openLinkRef.current();
+          return true;
+        }
         if (!menuRef.current || optionsRef.current.length === 0) return false;
         const list = optionsRef.current;
         if (event.key === "ArrowDown") {
@@ -94,6 +151,8 @@ export function ComposePanel() {
     },
     onUpdate: ({ editor: e }) => {
       store.setBody(e.isEmpty ? "" : e.getHTML());
+      // Typing moves the text out from under a card that is only reading a link.
+      setCard((c) => (c?.mode === "view" ? null : c));
       refreshMenu();
     },
     onSelectionUpdate: () => refreshMenu(),
@@ -112,6 +171,82 @@ export function ComposePanel() {
     setActive(0);
     setMenu({ query, left: Math.max(0, coords.left - box.left), top: coords.bottom - box.top + 4 });
   }
+
+  /** Where the link under `pos` starts and ends, and where it points. Null when `pos` is not in a link. */
+  function linkAt(pos: number): { from: number; to: number; href: string } | null {
+    if (!editor) return null;
+    const type = editor.schema.marks.link;
+    const range = type ? getMarkRange(editor.state.doc.resolve(pos), type) : undefined;
+    if (!range) return null;
+    const href = editor.state.doc.nodeAt(range.from)?.marks.find((m) => m.type === type)?.attrs.href as string | undefined;
+    return { from: range.from, to: range.to, href: href ?? "" };
+  }
+
+  /** Show the read-only card for the link under `pos`. Returns false when there is none. */
+  function viewLinkAt(pos: number): boolean {
+    const link = linkAt(pos);
+    if (!link || !editor || !frame.current) return false;
+    setMenu(null);
+    setCard({ mode: "view", ...link, ...anchorFor(editor, frame.current, link.from) });
+    return true;
+  }
+
+  /** Open the editing card: for the link under the caret, or for the selection (or caret) a new link will use. */
+  function openLink() {
+    if (!editor || !frame.current) return;
+    setMenu(null);
+    const { from, to, empty, $from } = editor.state.selection;
+    const link = empty ? linkAt($from.pos) : linkAt(from);
+    const range = link ? { from: link.from, to: link.to } : { from, to };
+    setDraftHref(link?.href ?? "");
+    setDraftText(editor.state.doc.textBetween(range.from, range.to));
+    setCard({ mode: "edit", href: link?.href ?? "", ...range, ...anchorFor(editor, frame.current, range.from) });
+  }
+
+  function startEditing() {
+    if (!card) return;
+    setDraftHref(card.href);
+    setDraftText(editor?.state.doc.textBetween(card.from, card.to) ?? "");
+    setCard({ ...card, mode: "edit" });
+  }
+
+  function applyLink() {
+    if (!editor || !card) return;
+    const href = normalizeLinkUrl(draftHref);
+    if (!href) return;
+    const original = editor.state.doc.textBetween(card.from, card.to);
+    const text = draftText.trim() || original || draftHref.trim();
+    const chain = editor.chain().focus();
+    if (card.from === card.to || text !== original) {
+      chain.insertContentAt({ from: card.from, to: card.to }, { type: "text", text, marks: [{ type: "link", attrs: { href } }] }).run();
+    } else {
+      chain.setTextSelection({ from: card.from, to: card.to }).setLink({ href }).run();
+    }
+    setCard(null);
+  }
+
+  function removeLink() {
+    if (!editor || !card) return;
+    editor.chain().focus().setTextSelection({ from: card.from, to: card.to }).unsetLink().run();
+    setCard(null);
+  }
+
+  function closeCard() {
+    setCard(null);
+    editor?.commands.focus();
+  }
+
+  // Clicking anywhere else dismisses the card. Clicks in the editor decide for themselves (handleClick).
+  useEffect(() => {
+    if (!card) return;
+    const away = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (cardEl.current?.contains(target) || target.closest("[data-link-ui]") || target.closest(".ProseMirror")) return;
+      setCard(null);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [card]);
 
   function accept(option: FieldOption) {
     if (!editor || !menuRef.current) return;
@@ -206,6 +341,9 @@ export function ComposePanel() {
                 {tool("Bold", <Bold className="size-4" aria-hidden />, editor.isActive("bold"), () => editor.chain().focus().toggleBold().run())}
                 {tool("Italic", <Italic className="size-4" aria-hidden />, editor.isActive("italic"), () => editor.chain().focus().toggleItalic().run())}
                 {tool("Bulleted list", <List className="size-4" aria-hidden />, editor.isActive("bulletList"), () => editor.chain().focus().toggleBulletList().run())}
+                <span data-link-ui>
+                  {tool("Link (Ctrl+K)", <Link2 className="size-4" aria-hidden />, card !== null || editor.isActive("link"), () => (card?.mode === "edit" ? closeCard() : openLink()))}
+                </span>
               </>
             ) : null}
             {tool("Edit HTML source", <Code className="size-4" aria-hidden />, source, () => setSource((v) => !v))}
@@ -224,6 +362,111 @@ export function ComposePanel() {
           ) : (
             <EditorContent editor={editor} />
           )}
+
+          {!source && card ? (
+            <div
+              ref={cardEl}
+              role="dialog"
+              aria-label={card.mode === "view" ? "Link" : card.href ? "Edit link" : "Add link"}
+              style={{ left: card.left, top: card.top }}
+              className="absolute z-30 w-[min(22rem,100%)] max-sm:left-0! max-sm:right-0 max-sm:w-auto rounded-stamp border border-line-strong bg-sheet p-3 shadow-lift"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  closeCard();
+                }
+              }}
+            >
+              {card.mode === "view" ? (
+                <div className="flex items-center gap-1">
+                  <a
+                    href={card.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={card.href}
+                    className="min-w-0 flex-1 truncate text-sm text-postal hover:text-postal-deep max-sm:py-2.5"
+                  >
+                    {card.href}
+                  </a>
+                  <a
+                    href={card.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open link in a new tab"
+                    className="grid size-8 max-sm:size-11 shrink-0 place-items-center rounded-stamp text-ink-2 hover:bg-sunk hover:text-ink"
+                  >
+                    <ExternalLink className="size-4" aria-hidden />
+                  </a>
+                  <button
+                    type="button"
+                    aria-label="Edit link"
+                    onClick={startEditing}
+                    className="grid size-8 max-sm:size-11 shrink-0 cursor-pointer place-items-center rounded-stamp text-ink-2 hover:bg-sunk hover:text-ink"
+                  >
+                    <Pencil className="size-4" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Remove link"
+                    onClick={removeLink}
+                    className="grid size-8 max-sm:size-11 shrink-0 cursor-pointer place-items-center rounded-stamp text-ink-2 hover:bg-failed-wash hover:text-failed"
+                  >
+                    <Unlink className="size-4" aria-hidden />
+                  </button>
+                </div>
+              ) : (
+                <form
+                  className="space-y-2.5"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    applyLink();
+                  }}
+                >
+                  <label className="block text-xs font-medium text-ink-2">
+                    Text to show
+                    <input
+                      className={`${inputClass} mt-1 h-9`}
+                      value={draftText}
+                      onChange={(e) => setDraftText(e.target.value)}
+                      placeholder="Pick up where you left off"
+                      spellCheck
+                    />
+                  </label>
+                  <label className="block text-xs font-medium text-ink-2">
+                    Link to
+                    <input
+                      autoFocus
+                      className={`${inputClass} mt-1 h-9`}
+                      value={draftHref}
+                      onChange={(e) => setDraftHref(e.target.value)}
+                      placeholder="example.com or https://example.com/offer"
+                      inputMode="url"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                    />
+                  </label>
+                  <div className="flex items-center justify-between gap-2">
+                    {card.href ? (
+                      <Button variant="ghost" onClick={removeLink} icon={<Unlink className="size-4" aria-hidden />}>
+                        Remove
+                      </Button>
+                    ) : (
+                      <span />
+                    )}
+                    <div className="flex gap-2">
+                      <Button variant="ghost" onClick={closeCard}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" variant="primary" disabled={!normalizeLinkUrl(draftHref)}>
+                        {card.href ? "Update" : "Add"}
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+              )}
+            </div>
+          ) : null}
 
           {menu && options.length > 0 ? (
             <ul

@@ -138,6 +138,15 @@ a {
 .ProseMirror li > p {
   margin: 0;
 }
+/* The reset makes links inherit the text colour. Inside the editor they should still read as links. */
+.ProseMirror a {
+  color: var(--color-postal);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.ProseMirror a:hover {
+  color: var(--color-postal-deep);
+}
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: var(--color-ink-3);
