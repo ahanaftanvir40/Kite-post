@@ -13,6 +13,7 @@ import { normalizeLinkUrl } from "../linkUrl";
 import { activeSheet, sendableRecipients, useMergeStore } from "../store";
 import { PreviewModal } from "./PreviewModal";
 import { SavedTemplates } from "./SavedTemplates";
+import { TokenMirror } from "./TokenMirror";
 import {
   createTokenHighlight,
   filterFields,
@@ -36,6 +37,49 @@ interface LinkCard {
   to: number;
   left: number;
   top: number;
+}
+
+const MENU_LIMIT = 8;
+
+/** The `@` suggestions: the columns that match what has been typed so far. */
+function ColumnMenu({
+  id,
+  options,
+  active,
+  onPick,
+  style,
+}: {
+  id?: string;
+  options: FieldOption[];
+  active: number;
+  onPick: (option: FieldOption) => void;
+  style: React.CSSProperties;
+}) {
+  return (
+    <ul
+      id={id}
+      role="listbox"
+      aria-label="Columns"
+      style={style}
+      className="absolute z-20 w-60 max-sm:left-0! max-sm:right-0 max-sm:w-auto overflow-hidden rounded-stamp border border-line-strong bg-sheet py-1 shadow-lift"
+    >
+      {options.slice(0, MENU_LIMIT).map((o, i) => (
+        <li
+          key={o.key}
+          role="option"
+          aria-selected={i === active}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onPick(o);
+          }}
+          className={`flex cursor-pointer items-baseline justify-between gap-3 px-3 py-1.5 text-sm ${i === active ? "bg-postal-wash" : ""}`}
+        >
+          <span className="font-mono text-[13px] text-postal-deep">@{o.key}</span>
+          <span className="truncate text-xs text-ink-3">{o.label}</span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 /** Where to hang a card under `pos`, relative to the editor frame. */
@@ -70,6 +114,11 @@ export function ComposePanel() {
   const frame = useRef<HTMLDivElement>(null);
   const options = menu ? filterFields(fields, menu.query) : [];
   const optionsRef = useRef<FieldOption[]>([]);
+  const subjectInput = useRef<HTMLInputElement>(null);
+  const subjectMirror = useRef<HTMLSpanElement>(null);
+  const [subjectMenu, setSubjectMenu] = useState<{ query: string } | null>(null);
+  const [subjectActive, setSubjectActive] = useState(0);
+  const subjectOptions = subjectMenu ? filterFields(fields, subjectMenu.query) : [];
   const [card, setCard] = useState<LinkCard | null>(null);
   const [draftText, setDraftText] = useState("");
   const [draftHref, setDraftHref] = useState("");
@@ -256,6 +305,35 @@ export function ComposePanel() {
     setMenu(null);
   }
 
+  /** A long subject scrolls inside its input; the highlight layer behind it has to scroll with it. */
+  function followSubjectScroll(input: HTMLInputElement) {
+    if (subjectMirror.current) subjectMirror.current.style.transform = `translateX(${-input.scrollLeft}px)`;
+  }
+
+  /** Open, move or close the subject's `@` menu to match the text before its caret. */
+  function refreshSubjectMenu(input: HTMLInputElement) {
+    const query = triggerQuery(input.value.slice(0, input.selectionStart ?? input.value.length));
+    if (query === null || filterFields(fields, query).length === 0) return setSubjectMenu(null);
+    if (query !== subjectMenu?.query) setSubjectActive(0);
+    setSubjectMenu({ query });
+  }
+
+  function acceptInSubject(option: FieldOption) {
+    const input = subjectInput.current;
+    if (!input || !subjectMenu) return;
+    const caret = input.selectionStart ?? input.value.length;
+    const from = caret - subjectMenu.query.length - 1;
+    const next = `${input.value.slice(0, from)}@${option.key} ${input.value.slice(caret)}`;
+    store.setSubject(next);
+    setSubjectMenu(null);
+    const end = from + option.key.length + 2;
+    // The controlled value lands on the next render; put the caret after the inserted column once it has.
+    requestAnimationFrame(() => {
+      input.focus();
+      input.setSelectionRange(end, end);
+    });
+  }
+
   // Keep the editor in step with store changes it did not originate (sample data, reset).
   useEffect(() => {
     if (!editor) return;
@@ -322,14 +400,50 @@ export function ComposePanel() {
         <label className="mt-4 block text-sm font-medium" htmlFor="subject">
           Subject
         </label>
-        <input
-          id="subject"
-          className={`${inputClass} mt-1`}
-          value={subject}
-          onChange={(e) => store.setSubject(e.target.value)}
-          placeholder="A quick hello, @firstname"
-          spellCheck
-        />
+        <div className="relative mt-1 rounded-stamp bg-sheet">
+          <TokenMirror text={subject} known={new Set(fields.map((f) => f.key))} innerRef={subjectMirror} />
+          <input
+            id="subject"
+            ref={subjectInput}
+            className={`${inputClass} relative bg-transparent!`}
+            value={subject}
+            onScroll={(e) => followSubjectScroll(e.currentTarget)}
+            onChange={(e) => {
+              store.setSubject(e.target.value);
+              refreshSubjectMenu(e.currentTarget);
+              followSubjectScroll(e.currentTarget);
+            }}
+            onClick={(e) => refreshSubjectMenu(e.currentTarget)}
+            onKeyUp={(e) => {
+              if (!["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)) refreshSubjectMenu(e.currentTarget);
+            }}
+            onKeyDown={(e) => {
+              if (!subjectMenu || subjectOptions.length === 0) return;
+              const count = Math.min(subjectOptions.length, MENU_LIMIT);
+              if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                e.preventDefault();
+                setSubjectActive((i) => (i + (e.key === "ArrowDown" ? 1 : count - 1)) % count);
+              } else if (e.key === "Enter" || e.key === "Tab") {
+                e.preventDefault();
+                acceptInSubject(subjectOptions[Math.min(subjectActive, count - 1)]);
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                setSubjectMenu(null);
+              }
+            }}
+            onBlur={() => setSubjectMenu(null)}
+            placeholder="A quick hello, @firstname"
+            role="combobox"
+            aria-expanded={subjectMenu !== null && subjectOptions.length > 0}
+            aria-controls="subject-columns"
+            aria-autocomplete="list"
+            aria-haspopup="listbox"
+            spellCheck
+          />
+          {subjectMenu && subjectOptions.length > 0 ? (
+            <ColumnMenu id="subject-columns" options={subjectOptions} active={subjectActive} onPick={acceptInSubject} style={{ left: 0, top: "100%", marginTop: 4 }} />
+          ) : null}
+        </div>
 
         <div className="mt-4 flex items-center justify-between">
           <span id="body-label" className="text-sm font-medium">
@@ -469,28 +583,7 @@ export function ComposePanel() {
           ) : null}
 
           {menu && options.length > 0 ? (
-            <ul
-              role="listbox"
-              aria-label="Columns"
-              style={{ left: menu.left, top: menu.top }}
-              className="absolute z-20 w-60 max-sm:left-0! max-sm:right-0 max-sm:w-auto overflow-hidden rounded-stamp border border-line-strong bg-sheet py-1 shadow-lift"
-            >
-              {options.slice(0, 8).map((o, i) => (
-                <li
-                  key={o.key}
-                  role="option"
-                  aria-selected={i === active}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    accept(o);
-                  }}
-                  className={`flex cursor-pointer items-baseline justify-between gap-3 px-3 py-1.5 text-sm ${i === active ? "bg-postal-wash" : ""}`}
-                >
-                  <span className="font-mono text-[13px] text-postal-deep">@{o.key}</span>
-                  <span className="truncate text-xs text-ink-3">{o.label}</span>
-                </li>
-              ))}
-            </ul>
+            <ColumnMenu options={options} active={active} onPick={accept} style={{ left: menu.left, top: menu.top }} />
           ) : null}
         </div>
 

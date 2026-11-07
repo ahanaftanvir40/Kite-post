@@ -254,6 +254,70 @@ describe("links in the message", () => {
   });
 });
 
+describe("@ suggestions in the subject", () => {
+  beforeEach(() => {
+    connect();
+    useMergeStore.getState().loadSample();
+    useMergeStore.getState().setSubject("");
+  });
+
+  it("suggests columns as you type @, filtered by what follows", async () => {
+    const user = userEvent.setup();
+    render(<ComposePanel />);
+    const subject = await screen.findByRole("combobox");
+    await user.click(subject);
+    await user.type(subject, "Hello @");
+    expect(within(screen.getByRole("listbox", { name: "Columns" })).getAllByRole("option").length).toBeGreaterThan(1);
+    await user.type(subject, "fir");
+    const options = within(screen.getByRole("listbox", { name: "Columns" })).getAllByRole("option");
+    expect(options[0]).toHaveTextContent("@firstname");
+  });
+
+  it("inserts the highlighted column with Enter and closes the menu", async () => {
+    const user = userEvent.setup();
+    render(<ComposePanel />);
+    const subject = await screen.findByRole("combobox");
+    await user.type(subject, "Hi @fir{Enter}");
+    expect(subject).toHaveValue("Hi @firstname ");
+    expect(screen.queryByRole("listbox", { name: "Columns" })).not.toBeInTheDocument();
+    expect(useMergeStore.getState().subject).toBe("Hi @firstname ");
+  });
+
+  it("inserts a column picked with the mouse in the middle of the text", async () => {
+    const user = userEvent.setup();
+    render(<ComposePanel />);
+    const subject = await screen.findByRole("combobox");
+    await user.type(subject, "Hi @fir");
+    await user.click(within(screen.getByRole("listbox", { name: "Columns" })).getByRole("option", { name: /@firstname/ }));
+    expect(subject).toHaveValue("Hi @firstname ");
+  });
+
+  it("highlights a column token blue and an unknown one red, without changing the text", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ComposePanel />);
+    const subject = await screen.findByRole("combobox");
+    await user.type(subject, "Hi @firstname and @nope ");
+    await user.keyboard("{Escape}");
+    expect(container.querySelector('[data-token-state="ok"]')).toHaveTextContent("@firstname");
+    expect(container.querySelector('[data-token-state="bad"]')).toHaveTextContent("@nope");
+    expect(subject).toHaveValue("Hi @firstname and @nope ");
+  });
+
+  it("closes with Escape and stays closed when the text has no @", async () => {
+    const user = userEvent.setup();
+    render(<ComposePanel />);
+    const subject = await screen.findByRole("combobox");
+    await user.type(subject, "Hi @");
+    expect(screen.getByRole("listbox", { name: "Columns" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("listbox", { name: "Columns" })).not.toBeInTheDocument();
+    await user.type(subject, "x");
+    await user.clear(subject);
+    await user.type(subject, "Plain subject");
+    expect(screen.queryByRole("listbox", { name: "Columns" })).not.toBeInTheDocument();
+  });
+});
+
 describe("saved lists", () => {
   beforeEach(() => connect());
 

@@ -32,12 +32,15 @@ export function Hero() {
   return (
     <section ref={root} aria-labelledby="hero-title" className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <HeroBlooms />
-      <div className="hero-copy relative z-10 mx-auto flex max-w-[70rem] flex-col items-center max-sm:flex-1 max-sm:justify-center px-5 pt-8 text-center sm:px-8 sm:pt-[clamp(6.5rem,12vh,9rem)] laptop:pt-5">
+      <div className="hero-copy relative z-10 mx-auto flex max-w-[70rem] flex-col items-center max-sm:flex-1 max-sm:justify-center px-5 pt-8 text-center sm:px-8 sm:pt-[clamp(6.5rem,12vh,9rem)] laptop:pt-[clamp(1.75rem,5vh,3rem)]">
         <h1
           id="hero-title"
           className="font-display text-balance text-[clamp(2.6rem,6.4vw,5rem)] laptop:text-[clamp(2.4rem,4.7vw,3.6rem)] font-semibold leading-[0.98] tracking-[-0.035em] text-kite-ink"
         >
-          <span className="hero-lead">Find leads. Mail merge from</span>{" "}
+          {/* On short laptop screens the headline breaks in two: the lead-in, then "from any domain". */}
+          <span className="hero-lead">
+            Find leads. Mail merge<br className="hidden laptop:block" /> from
+          </span>{" "}
           <span className="hero-swash relative inline-block whitespace-nowrap">
             <SquigglyText scale={4} className="relative">
               any domain
