@@ -327,7 +327,7 @@ describe("SendPanel", () => {
 });
 
 describe("Workspace", () => {
-  it("asks for the mailbox first and shows the four steps, then Workspaces and History", async () => {
+  it("asks for the mailbox first and shows the four steps, then History (workspaces live in the navbar picker)", async () => {
     render(<Workspace />);
     expect(await screen.findByRole("heading", { name: "Connect your mailbox" })).toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Steps" });
@@ -342,7 +342,6 @@ describe("Workspace", () => {
       "Recipients",
       "Compose",
       "Review and send",
-      "Workspaces",
       "History",
     ]);
     expect(within(nav).getByRole("button", { name: /Connect/ })).toHaveAttribute("aria-current", "step");
@@ -391,6 +390,44 @@ describe("Workspace", () => {
     const table = screen.getByRole("table");
     expect(within(table).getAllByText("Ready")).toHaveLength(4);
     expect(useMergeStore.getState().emailColumn).toBe("Email");
+  });
+
+  it("opens a chosen file on its own tab, and Recipients goes back to choosing a file", async () => {
+    vi.mocked(api.getSession).mockResolvedValue(CONNECTED);
+    const user = userEvent.setup();
+    render(<Workspace />);
+    const nav = await screen.findByRole("navigation", { name: "Steps" });
+    await user.click(await screen.findByRole("button", { name: "Continue to recipients" }));
+    // Before a file is chosen there is no tab for it.
+    expect(within(nav).queryByRole("button", { name: "Selected file" })).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole("button", { name: "Try the sample data" }));
+    expect(useMergeStore.getState().step).toBe("selected");
+    const tab = within(nav).getByRole("button", { name: "Selected file" });
+    expect(tab).toHaveAttribute("aria-current", "page");
+    // Recipients is still the numbered step this belongs to, and the table is on this tab.
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Add your recipients" })).not.toBeInTheDocument();
+
+    // Recipients shows only choosing a file, with a way back to the one that is open.
+    await user.click(within(nav).getByRole("button", { name: /Recipients/ }));
+    expect(screen.getByRole("heading", { name: "Add your recipients" })).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "View selected file" }));
+    expect(screen.getByRole("table")).toBeInTheDocument();
+
+    // Deselecting the file drops its tab and returns to choosing one.
+    await user.click(screen.getByRole("button", { name: "Deselect file" }));
+    expect(useMergeStore.getState().step).toBe("recipients");
+    expect(within(nav).queryByRole("button", { name: "Selected file" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Add your recipients" })).toBeInTheDocument();
+  });
+
+  it("does not pull you off another view when a saved list opens", () => {
+    const s = useMergeStore.getState();
+    s.setStep("history");
+    s.loadSample();
+    expect(useMergeStore.getState().step).toBe("history");
   });
 
   it("flags bad rows and lets the user exclude one", async () => {

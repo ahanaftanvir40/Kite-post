@@ -51,6 +51,7 @@ function RunRow({ run, workspaceId }: { run: RunSummary; workspaceId: string }) 
               <span className="truncate" title={run.fileName}>
                 {run.fileName}
               </span>
+              {run.tab ? <span className="shrink-0 rounded-full bg-sunk px-2 py-0.5 text-ink-2">{run.tab}</span> : null}
             </span>
           ) : null}
           <span className="block truncate text-xs text-ink-3">

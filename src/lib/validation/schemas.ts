@@ -60,6 +60,8 @@ export const sendSchema = z.object({
       subject: z.string().max(MAX_SUBJECT_LENGTH),
       /** The spreadsheet the recipients came from, so history can say which file was sent. */
       fileName: z.string().trim().max(200).optional(),
+      /** The tab of that spreadsheet, when it has several kept together. */
+      tab: z.string().trim().max(100).optional(),
       /** The workspace this send belongs to. Checked against the signed-in mailbox before anything is written. */
       workspaceId,
     })
@@ -93,15 +95,33 @@ export const templateSaveSchema = z.object({
   }),
 });
 
+export const MAX_SAVED_TABS = 20;
+const savedRows = z.array(z.record(z.string().max(200), cell)).max(MAX_SAVED_ROWS);
+const savedHeaders = z.array(z.string().max(200)).min(1).max(MAX_SAVED_COLUMNS);
+
+const listTabSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100),
+    headers: savedHeaders,
+    // Empty when the tab has no email column.
+    emailColumn: z.string().max(200),
+    rows: savedRows,
+  })
+  .refine((t) => t.emailColumn === "" || t.headers.includes(t.emailColumn), { message: "The email column is not one of the headers." });
+
 export const listSaveSchema = z
   .object({
     name: savedName,
     fileName: z.string().trim().max(200),
-    headers: z.array(z.string().max(200)).min(1).max(MAX_SAVED_COLUMNS),
+    headers: savedHeaders,
     emailColumn: z.string().max(200),
-    rows: z.array(z.record(z.string().max(200), cell)).min(1, { message: "There are no rows to save." }).max(MAX_SAVED_ROWS),
+    rows: savedRows.min(1, { message: "There are no rows to save." }),
+    tabs: z.array(listTabSchema).min(2).max(MAX_SAVED_TABS).optional(),
   })
-  .refine((v) => v.headers.includes(v.emailColumn), { message: "The email column is not one of the headers." });
+  .refine((v) => v.headers.includes(v.emailColumn), { message: "The email column is not one of the headers." })
+  .refine((v) => !v.tabs || v.tabs.reduce((sum, t) => sum + t.rows.length, 0) <= MAX_SAVED_ROWS * 5, {
+    message: "This workbook has too many rows to save.",
+  });
 
 export const senderSaveSchema = z.object({
   fromName: noLineBreaks("Display name").default(""),

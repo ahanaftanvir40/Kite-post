@@ -181,6 +181,16 @@ a {
   background-position: 150% 0;
   animation: skeleton-sweep 1.6s ease-in-out infinite;
 }
+/* Dropdown menus ease in from the control they belong to: a small drop, not a pop. */
+.select-menu {
+  animation: select-in 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes select-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
 @keyframes skeleton-sweep {
   to {
     background-position: -50% 0;

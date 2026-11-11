@@ -26,12 +26,25 @@ export interface TemplateRecord extends TemplateInput {
   updatedAt: string;
 }
 
+/** One tab of a saved workbook. `emailColumn` is empty when the tab has no email column. */
+export interface ListTab {
+  name: string;
+  headers: string[];
+  emailColumn: string;
+  rows: Row[];
+}
+
+/**
+ * A saved list is one spreadsheet. `headers`, `emailColumn` and `rows` are its (first usable) sheet.
+ * A workbook kept together also carries every tab in `tabs`, so it stays one saved list.
+ */
 export interface RecipientListInput {
   name: string;
   fileName: string;
   headers: string[];
   emailColumn: string;
   rows: Row[];
+  tabs?: ListTab[];
 }
 export interface RecipientListSummary {
   id: string;
@@ -39,13 +52,22 @@ export interface RecipientListSummary {
   fileName: string;
   headers: string[];
   emailColumn: string;
+  /** Rows in every tab together. */
   rowCount: number;
+  /** The tabs of a workbook list, in order. Absent for a single sheet. */
+  tabNames?: string[];
   updatedAt: string;
   /** When the list was marked as already done or sent. Absent while it is still to do. */
   doneAt?: string;
 }
 export interface RecipientListRecord extends RecipientListSummary {
   rows: Row[];
+  tabs?: ListTab[];
+}
+
+/** Total rows of what is being saved: every tab of a workbook, or the one sheet. */
+export function listRowCount(input: Pick<RecipientListInput, "rows" | "tabs">): number {
+  return input.tabs ? input.tabs.reduce((sum, t) => sum + t.rows.length, 0) : input.rows.length;
 }
 
 /** What Google tells us about the person who signed in. */
@@ -105,6 +127,8 @@ export interface RunContext {
   fromAddress: string;
   /** The spreadsheet the recipients came from. Absent when the run did not come from a file. */
   fileName?: string;
+  /** The tab of a workbook the recipients came from. Absent for a single sheet. */
+  tab?: string;
 }
 export interface RunSummary {
   runId: string;
@@ -112,6 +136,8 @@ export interface RunSummary {
   fromAddress: string;
   /** The spreadsheet this run was sent from. Absent on runs recorded before files were tracked. */
   fileName?: string;
+  /** The tab of that workbook this run was sent from, if it was one of several. */
+  tab?: string;
   startedAt: string;
   finishedAt: string;
   sent: number;

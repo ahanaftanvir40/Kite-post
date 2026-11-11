@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, FolderOpen, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, FolderOpen, Pencil, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -196,8 +196,15 @@ export function WorkspacesPanel() {
 
   return (
     <section aria-labelledby="workspaces-title" className="max-w-2xl">
+      <button
+        type="button"
+        onClick={() => setStep("recipients")}
+        className="-ml-1 mb-2 inline-flex cursor-pointer items-center gap-1.5 rounded-stamp px-1 py-0.5 max-sm:py-3 text-sm text-ink-2 transition-colors hover:text-ink"
+      >
+        <ArrowLeft className="size-4" aria-hidden /> Back to recipients
+      </button>
       <h2 id="workspaces-title" className="font-display text-2xl font-semibold tracking-[-0.025em]">
-        Workspaces
+        Manage workspaces
       </h2>
       <p className="mt-1 max-w-prose text-sm text-ink-2">
         A workspace is a folder for one project or client. Open one, drop your spreadsheet in, and everything you save stays inside it: its own saved lists,

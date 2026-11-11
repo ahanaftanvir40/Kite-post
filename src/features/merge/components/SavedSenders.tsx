@@ -37,7 +37,8 @@ export function SavedSenders() {
     setActionError(null);
     try {
       await deleteSaved("senders", id);
-      reload();
+      // Wait for the new list, so the row is gone by the time the spinner stops.
+      await reload();
     } catch (e) {
       setActionError(messageOf(e, "Could not delete that sender."));
     } finally {
@@ -71,7 +72,7 @@ export function SavedSenders() {
               quietAction={active}
               onAction={() => void choose(s.id)}
               deleteLabel={`Delete sender ${s.fromAddress}`}
-              onDelete={() => void remove(s.id)}
+              onDelete={() => remove(s.id)}
               busy={busy || active}
               badge={active ? <Badge tone="postal">Current</Badge> : null}
             />

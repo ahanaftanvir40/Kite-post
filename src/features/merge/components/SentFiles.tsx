@@ -2,7 +2,8 @@
 
 import { Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
-import { formatWhen, type FinishedList, type SentFile } from "../saved";
+import { formatWhen, tabChips, type FinishedList, type SentFile } from "../saved";
+import { keyOf } from "@/lib/db/types";
 import { useMergeStore } from "../store";
 import { SavedRow, SavedShell } from "./SavedParts";
 import { LoadingRows } from "@/components/ui/Skeleton";
@@ -15,20 +16,24 @@ interface Props {
   finished: FinishedList[];
   /** Spreadsheets that were sent from but have no saved list. */
   loose: SentFile[];
+  /** Name of the saved list that is open now, if any, so its row can say so. */
+  openName: string | null;
+  /** Go to the open file, instead of reloading it. */
+  onView: () => void;
   loading: boolean;
   error: string | null;
   busy: boolean;
   onOpen: (list: FinishedList) => void;
   onRestore: (list: FinishedList) => void;
-  onDelete: (list: FinishedList) => void;
-  onDeleteFile: (file: SentFile) => void;
+  onDelete: (list: FinishedList) => void | Promise<void>;
+  onDeleteFile: (file: SentFile) => void | Promise<void>;
 }
 
 /**
  * Everything that is finished with, beside the saved lists. Lists can be opened, moved back
  * to Saved lists, or deleted. Files with no saved list can be deleted, which clears their history.
  */
-export function DoneAndSent({ workspaceName, finished, loose, loading, error, busy, onOpen, onRestore, onDelete, onDeleteFile }: Props) {
+export function DoneAndSent({ workspaceName, finished, loose, openName, onView, loading, error, busy, onOpen, onRestore, onDelete, onDeleteFile }: Props) {
   const setStep = useMergeStore((s) => s.setStep);
 
   // Nothing to say until a list is finished or a file is sent. An empty box would only add noise.
@@ -47,20 +52,25 @@ export function DoneAndSent({ workspaceName, finished, loose, loading, error, bu
             const { list, sent } = f;
             const rows = `${list.rowCount} ${list.rowCount === 1 ? "row" : "rows"}`;
             const when = list.doneAt ? `marked done ${formatWhen(list.doneAt)}` : `last sent ${formatWhen(f.at)}`;
+            const selected = openName !== null && keyOf(list.name) === keyOf(openName);
             return (
               <SavedRow
                 key={list.id}
                 title={list.name}
-                meta={`${rows} · ${when}`}
+                meta={`${list.tabNames ? `${list.tabNames.length} tabs · ` : ""}${rows} · ${when}`}
+                tabs={tabChips(list, sent)}
+                selected={selected}
                 badge={
                   <span className="flex gap-1">
+                    {selected ? <Badge tone="postal">Selected</Badge> : null}
                     {list.doneAt ? <Badge tone="sent">Done</Badge> : null}
                     {sent ? <Badge tone="sent">{sent.sent} sent</Badge> : null}
                     {sent && sent.failed > 0 ? <Badge tone="failed">{sent.failed} failed</Badge> : null}
                   </span>
                 }
-                actionLabel="Open"
-                onAction={() => onOpen(f)}
+                actionLabel={selected ? "View" : "Open"}
+                quietAction={selected}
+                onAction={() => (selected ? onView() : onOpen(f))}
                 extra={{ label: "Move back", hint: "Move back to Saved lists", icon: <Undo2 className="size-4" aria-hidden />, onClick: () => onRestore(f) }}
                 deleteLabel={`Delete list ${list.name}`}
                 confirmNote={sent ? `Deletes the list and its send history (${plural(sent.runs, "send")}).` : "Deletes this list."}

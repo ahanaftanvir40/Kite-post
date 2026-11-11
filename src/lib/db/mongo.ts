@@ -3,6 +3,7 @@ import {
   keyOf,
   LEGACY_WORKSPACE_NAME,
   LIMITS,
+  listRowCount,
   mergeStudySearch,
   STARTER_WORKSPACE_NAME,
   StoreConflictError,
@@ -12,6 +13,7 @@ import {
   type ConnectionRecord,
   type MessageLogRecord,
   type RecipientListRecord,
+  type ListTab,
   type RecipientListSummary,
   type Row,
   type RunSummary,
@@ -76,7 +78,10 @@ interface ListDoc {
   emailColumn: string;
   /** Values aligned to `headers`, so header text never becomes a field name. */
   rows: string[][];
+  /** Every tab of a workbook kept together, with rows aligned to each tab's headers. */
+  tabs?: { name: string; headers: string[]; emailColumn: string; rows: string[][] }[];
   rowCount: number;
+  tabNames?: string[];
   doneAt?: Date;
   updatedAt: Date;
 }
@@ -97,6 +102,7 @@ interface RunDoc {
   subject: string;
   fromAddress: string;
   fileName?: string;
+  tab?: string;
   startedAt: Date;
   finishedAt: Date;
   sent: number;
@@ -141,6 +147,14 @@ const rowsToArrays = (headers: string[], rows: Row[]) => rows.map((r) => headers
 const arraysToRows = (headers: string[], rows: string[][]): Row[] =>
   rows.map((cells) => Object.fromEntries(headers.map((h, i) => [h, cells[i] ?? ""])));
 
+const tabToDoc = (t: ListTab) => ({ name: t.name, headers: t.headers, emailColumn: t.emailColumn, rows: rowsToArrays(t.headers, t.rows) });
+const tabFromDoc = (t: NonNullable<ListDoc["tabs"]>[number]): ListTab => ({
+  name: t.name,
+  headers: t.headers,
+  emailColumn: t.emailColumn,
+  rows: arraysToRows(t.headers, t.rows),
+});
+
 const toTemplate = (d: TemplateDoc): TemplateRecord => ({
   id: d._id.toHexString(),
   name: d.name,
@@ -149,13 +163,14 @@ const toTemplate = (d: TemplateDoc): TemplateRecord => ({
   fallbacks: d.fallbacks,
   updatedAt: d.updatedAt.toISOString(),
 });
-const toSummary = (d: Omit<ListDoc, "rows">): RecipientListSummary => ({
+const toSummary = (d: Omit<ListDoc, "rows" | "tabs">): RecipientListSummary => ({
   id: d._id.toHexString(),
   name: d.name,
   fileName: d.fileName,
   headers: d.headers,
   emailColumn: d.emailColumn,
   rowCount: d.rowCount,
+  ...(d.tabNames ? { tabNames: d.tabNames } : {}),
   updatedAt: d.updatedAt.toISOString(),
   ...(d.doneAt ? { doneAt: d.doneAt.toISOString() } : {}),
 });
@@ -179,6 +194,7 @@ const toRun = (d: RunDoc): RunSummary => ({
   subject: d.subject,
   fromAddress: d.fromAddress,
   ...(d.fileName ? { fileName: d.fileName } : {}),
+  ...(d.tab ? { tab: d.tab } : {}),
   startedAt: d.startedAt.toISOString(),
   finishedAt: d.finishedAt.toISOString(),
   sent: d.sent,
@@ -446,7 +462,7 @@ export function createMongoStore(db: Db): Store {
 
     async listLists(owner, workspaceId) {
       const docs = await lists
-        .find({ owner, workspaceId }, { projection: { rows: 0 } })
+        .find({ owner, workspaceId }, { projection: { rows: 0, tabs: 0 } })
         .sort({ updatedAt: -1 })
         .limit(LIMITS.lists)
         .toArray();
@@ -465,19 +481,24 @@ export function createMongoStore(db: Db): Store {
             headers: input.headers,
             emailColumn: input.emailColumn,
             rows: rowsToArrays(input.headers, input.rows),
-            rowCount: input.rows.length,
+            rowCount: listRowCount(input),
             updatedAt: new Date(),
+            ...(input.tabs ? { tabs: input.tabs.map(tabToDoc), tabNames: input.tabs.map((t) => t.name) } : {}),
           },
+          // A plain sheet saved over a workbook of the same name replaces the tabs too.
+          ...(input.tabs ? {} : { $unset: { tabs: "", tabNames: "" } }),
         },
-        { upsert: true, returnDocument: "after", projection: { rows: 0 } },
+        { upsert: true, returnDocument: "after", projection: { rows: 0, tabs: 0 } },
       );
-      return toSummary(doc as Omit<ListDoc, "rows">);
+      return toSummary(doc as Omit<ListDoc, "rows" | "tabs">);
     },
     async getList(owner, workspaceId, id): Promise<RecipientListRecord | null> {
       const _id = toObjectId(id);
       if (!_id) return null;
       const doc = await lists.findOne({ _id, owner, workspaceId });
-      return doc ? { ...toSummary(doc), rows: arraysToRows(doc.headers, doc.rows) } : null;
+      if (!doc) return null;
+      const tabs = doc.tabs?.map(tabFromDoc);
+      return { ...toSummary(doc), rows: arraysToRows(doc.headers, doc.rows), ...(tabs ? { tabs } : {}) };
     },
     async deleteList(owner, workspaceId, id) {
       const _id = toObjectId(id);
@@ -491,9 +512,9 @@ export function createMongoStore(db: Db): Store {
         { _id, owner, workspaceId },
         // Moving back counts as an edit, so the list is newer than any send made from it.
         done ? { $set: { doneAt: new Date() } } : { $set: { updatedAt: new Date() }, $unset: { doneAt: "" } },
-        { returnDocument: "after", projection: { rows: 0 } },
+        { returnDocument: "after", projection: { rows: 0, tabs: 0 } },
       );
-      return doc ? toSummary(doc as Omit<ListDoc, "rows">) : null;
+      return doc ? toSummary(doc as Omit<ListDoc, "rows" | "tabs">) : null;
     },
 
     async listSenders(owner) {
@@ -539,7 +560,7 @@ export function createMongoStore(db: Db): Store {
         {
           $inc: { sent, failed: batch.length - sent },
           $set: { finishedAt: at },
-          $setOnInsert: { subject: run.subject, fromAddress: run.fromAddress, ...(run.fileName ? { fileName: run.fileName } : {}), startedAt: at },
+          $setOnInsert: { subject: run.subject, fromAddress: run.fromAddress, ...(run.fileName ? { fileName: run.fileName } : {}), ...(run.tab ? { tab: run.tab } : {}), startedAt: at },
         },
         { upsert: true },
       );
