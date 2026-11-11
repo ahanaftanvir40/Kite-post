@@ -17,7 +17,7 @@ async function recordHistory(
   store: Store | null,
   owner: string,
   session: SessionData,
-  run: { runId: string; subject: string; fileName?: string; workspaceId: string },
+  run: { runId: string; subject: string; fileName?: string; tab?: string; workspaceId: string },
   messages: MessageInput[],
   outcomes: SendOutcome[],
 ): Promise<void> {
@@ -36,7 +36,7 @@ async function recordHistory(
         ...(o.status === "failed" ? { error: o.error } : {}),
       });
     }
-    await store.logMessages(owner, run.workspaceId, { runId: run.runId, subject: run.subject, fromAddress: session.fromAddress, fileName: run.fileName }, entries);
+    await store.logMessages(owner, run.workspaceId, { runId: run.runId, subject: run.subject, fromAddress: session.fromAddress, fileName: run.fileName, tab: run.tab }, entries);
   } catch {
     // Ignored on purpose. That includes a workspace that was deleted mid-run: the mail still went out.
   }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronDown } from "lucide-react";
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 type Variant = "field" | "pill";
@@ -10,6 +10,13 @@ export interface SelectOption {
   value: string;
   label: string;
   disabled?: boolean;
+  /**
+   * Marks a row that does something instead of picking a value, such as "Manage…". It sits below a
+   * divider, is quieter than the choices, and never shows the selected check.
+   */
+  action?: boolean;
+  /** A small icon at the end of the row, in the column the selected check uses. */
+  icon?: ReactNode;
 }
 
 export interface SelectProps {
@@ -212,10 +219,14 @@ export function Select({
               role="listbox"
               aria-label={ariaLabel}
               style={{ position: "fixed", left: placement.left, minWidth: placement.width, top: placement.top, bottom: placement.bottom, maxHeight: placement.maxHeight }}
-              className="z-[60] max-w-[min(24rem,calc(100vw-1rem))] overflow-auto rounded-2xl border border-line bg-sheet p-1 shadow-[0_12px_32px_-12px_rgba(18,20,43,0.28)]"
+              // Elevation is the shadow alone: a hairline under a soft shadow reads as a boxed card.
+              className={`select-menu z-[60] max-w-[min(24rem,calc(100vw-1rem))] overflow-auto rounded-xl bg-sheet p-1.5 shadow-lift ${
+                placement.bottom !== undefined ? "origin-bottom" : "origin-top"
+              }`}
             >
               {options.map((option, index) => {
-                const isSelected = index === selected;
+                const isSelected = index === selected && !option.action;
+                const isActive = index === active && !option.disabled;
                 return (
                   <li
                     key={option.value}
@@ -227,12 +238,22 @@ export function Select({
                     onMouseDown={(e) => e.preventDefault()}
                     onMouseMove={() => !option.disabled && setActive(index)}
                     onClick={() => choose(index)}
-                    className={`flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm ${
-                      option.disabled ? "cursor-not-allowed text-ink-3" : isSelected ? "font-medium text-postal-deep" : "text-ink"
-                    } ${index === active && !option.disabled ? "bg-sunk" : ""} ${isSelected && index !== active ? "bg-postal-wash" : ""}`}
+                    // One highlight only: the row under the pointer or keyboard. The chosen row is told apart
+                    // by weight and its check, so hovering never produces two matching blue rows.
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors duration-100 max-sm:py-2.5 ${
+                      option.action ? "relative mt-1.5 before:absolute before:inset-x-1 before:-top-1 before:h-px before:bg-line" : ""
+                    } ${
+                      option.disabled
+                        ? "cursor-not-allowed text-ink-3"
+                        : isSelected
+                          ? "font-semibold text-ink"
+                          : "text-ink"
+                    } ${isActive ? "bg-sunk" : ""}`}
                   >
                     <span className="min-w-0 flex-1 truncate">{option.label}</span>
-                    {isSelected ? <Check aria-hidden className="size-4 shrink-0 text-postal" /> : null}
+                    {/* Trailing, in the same column as the check, so every label starts at the same left edge. */}
+                    {option.icon ? <span className="grid size-4 shrink-0 place-items-center text-ink-3">{option.icon}</span> : null}
+                    {isSelected ? <Check aria-hidden className="size-4 shrink-0 text-postal" strokeWidth={2.25} /> : null}
                   </li>
                 );
               })}

@@ -1,6 +1,7 @@
 import {
   keyOf,
   LIMITS,
+  listRowCount,
   mergeStudySearch,
   STARTER_WORKSPACE_NAME,
   StoreConflictError,
@@ -57,8 +58,8 @@ export function createMemoryStore(now: () => Date = () => new Date()): Store {
   };
   const summarize = (l: RecipientListRecord): RecipientListSummary => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { rows, ...summary } = l;
-    return summary;
+    const { rows, tabs, ...summary } = l;
+    return tabs ? { ...summary, tabNames: tabs.map((t) => t.name) } : summary;
   };
   const describe = (w: WorkspaceRow): WorkspaceSummary => ({
     ...w.value,
@@ -175,11 +176,14 @@ export function createMemoryStore(now: () => Date = () => new Date()): Store {
       const key = keyOf(input.name);
       const existing = inside(lists, owner, workspaceId).find((l) => l.key === key);
       if (existing) {
-        existing.value = { ...existing.value, ...input, rowCount: input.rows.length, updatedAt: stamp() };
+        // A plain sheet saved over a workbook of the same name replaces the tabs too.
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { tabs: _old, ...kept } = existing.value;
+        existing.value = { ...kept, ...input, rowCount: listRowCount(input), updatedAt: stamp() };
         return summarize(existing.value);
       }
       if (inside(lists, owner, workspaceId).length >= LIMITS.lists) throw new StoreLimitError("lists");
-      const value: RecipientListRecord = { ...input, id: nextId(), rowCount: input.rows.length, updatedAt: stamp() };
+      const value: RecipientListRecord = { ...input, id: nextId(), rowCount: listRowCount(input), updatedAt: stamp() };
       lists.push({ owner, workspaceId, key, value });
       return summarize(value);
     },
@@ -248,6 +252,7 @@ export function createMemoryStore(now: () => Date = () => new Date()): Store {
             subject: run.subject,
             fromAddress: run.fromAddress,
             ...(run.fileName ? { fileName: run.fileName } : {}),
+            ...(run.tab ? { tab: run.tab } : {}),
             startedAt: at,
             finishedAt: at,
             sent: 0,

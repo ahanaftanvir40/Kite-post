@@ -1,10 +1,16 @@
 "use client";
 
-import { FolderOpen } from "lucide-react";
+import { FolderOpen, Settings2 } from "lucide-react";
 import { Select } from "@/components/ui/Select";
 import { useMergeStore } from "../store";
 
-/** Always-visible picker for the workspace everything is saved into. */
+/** Not a workspace: choosing it opens the screen to create, rename and delete them. */
+const MANAGE = "__manage__";
+
+/**
+ * The one place for workspaces: pick the one everything is saved into, or choose "Manage workspaces"
+ * at the end of the list to create, rename or delete them. It lives in the navbar so it is always in reach.
+ */
 export function WorkspaceSwitcher() {
   const canSave = useMergeStore((s) => Boolean(s.session?.account && s.session.savingAvailable));
   const workspaces = useMergeStore((s) => s.workspaces);
@@ -38,10 +44,11 @@ export function WorkspaceSwitcher() {
         value={activeId ?? ""}
         // Changing folders mid-send would file the rest of the run under another workspace.
         disabled={running}
-        onChange={(id) => switchWorkspace(id || null)}
+        onChange={(id) => (id === MANAGE ? setStep("workspaces") : switchWorkspace(id || null))}
         options={[
           ...(activeId === null ? [{ value: "", label: "Choose a workspace" }] : []),
           ...workspaces.map((w) => ({ value: w.id, label: w.name })),
+          { value: MANAGE, label: "Manage workspaces", action: true, icon: <Settings2 className="size-4" aria-hidden /> },
         ]}
       />
     </label>

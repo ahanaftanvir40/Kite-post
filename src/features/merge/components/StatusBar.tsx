@@ -2,11 +2,12 @@
 
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { sendableRecipients, STEPS, useMergeStore, type FlowStepId, type StepId } from "../store";
+import { flowStepOf, sendableRecipients, STEPS, useMergeStore, type FlowStepId, type StepId } from "../store";
 
-/** What the primary action on each step does, and when it is allowed. */
+/** What the primary action on each step does. The loaded file counts as the Recipients step. */
 export function nextStep(step: StepId): FlowStepId | null {
-  const i = STEPS.findIndex((s) => s.id === step);
+  const at = flowStepOf(step);
+  const i = at === null ? -1 : STEPS.findIndex((s) => s.id === at);
   return i === -1 ? null : (STEPS[i + 1]?.id ?? null);
 }
 
@@ -26,7 +27,8 @@ export function StatusBar() {
     compose: { ok: subject.trim().length > 0, hint: "Write a subject to continue" },
     send: { ok: true, hint: "" },
   };
-  const { ok, hint } = step === "history" || step === "workspaces" ? { ok: true, hint: "" } : gate[step];
+  const at = flowStepOf(step);
+  const { ok, hint } = at === null ? { ok: true, hint: "" } : gate[at];
   const label = next ? STEPS.find((s) => s.id === next)?.label : null;
 
   return (

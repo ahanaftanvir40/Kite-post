@@ -1,23 +1,32 @@
 "use client";
 
+import { FileSpreadsheet, type LucideIcon } from "lucide-react";
 import { useRef } from "react";
 import { EASE_OUT, gsap, useMotion } from "@/lib/motion";
 import { useSessionBootstrap, useWorkspaceBootstrap } from "../hooks";
-import { STEPS, useMergeStore, type FlowStepId, type StepId } from "../store";
+import { flowStepOf, STEPS, useMergeStore, type FlowStepId, type StepId } from "../store";
 import { ComposePanel } from "./ComposePanel";
 import { ConnectPanel } from "./ConnectPanel";
 import { HistoryPanel } from "./HistoryPanel";
 import { RecipientsPanel } from "./RecipientsPanel";
+import { SelectedFilePanel } from "./SelectedFilePanel";
 import { SendPanel } from "./SendPanel";
 import { StatusBar } from "./StatusBar";
 import { WorkspacesPanel } from "./WorkspacesPanel";
-import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
+/**
+ * Views beside the numbered flow. They are never a "next" step. Workspaces is not here: it is
+ * reached from the picker in the navbar ("Manage workspaces"), so there is one place for it.
+ */
+interface SideView {
+  id: "selected" | "history";
+  label: string;
+  /** Tooltip, e.g. the name of the open file. */
+  hint?: string;
+  /** Marks a tab that stands for something you have open, so it is tinted even when you are elsewhere. */
+  icon?: LucideIcon;
+}
 
-/** Views beside the numbered flow. They are never a "next" step. */
-const SIDE_VIEWS: { id: Exclude<StepId, FlowStepId>; label: string }[] = [
-  { id: "workspaces", label: "Workspaces" },
-  { id: "history", label: "History" },
-];
+const SIDE_VIEWS: SideView[] = [{ id: "history", label: "History" }];
 
 /** Shorter step names for phones, where the pills share two rows. */
 const SHORT_LABELS: Partial<Record<FlowStepId, string>> = { send: "Review" };
@@ -28,6 +37,8 @@ function Panel({ step }: { step: StepId }) {
       return <ConnectPanel />;
     case "recipients":
       return <RecipientsPanel />;
+    case "selected":
+      return <SelectedFilePanel />;
     case "compose":
       return <ComposePanel />;
     case "send":
@@ -48,6 +59,7 @@ export function Workspace() {
   useWorkspaceBootstrap();
   const step = useMergeStore((s) => s.step);
   const setStep = useMergeStore((s) => s.setStep);
+  const fileName = useMergeStore((s) => s.workbook?.fileName ?? null);
   const stage = useRef<HTMLDivElement>(null);
   const header = useRef<HTMLElement>(null);
 
@@ -67,12 +79,15 @@ export function Workspace() {
     { scope: stage, dependencies: [step] },
   );
 
-  const current = STEPS.findIndex((s) => s.id === step);
+  const at = flowStepOf(step);
+  const current = at === null ? -1 : STEPS.findIndex((s) => s.id === at);
+  // The loaded file gets a tab of its own, but only while there is a file to show.
+  const sideViews: SideView[] = fileName !== null ? [{ id: "selected", label: "Selected file", hint: fileName, icon: FileSpreadsheet }, ...SIDE_VIEWS] : SIDE_VIEWS;
 
   return (
     <div className="flex flex-1 flex-col">
       <header ref={header} className="border-b border-line bg-sheet">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-2 px-4 pb-5 pt-10 max-sm:pt-6 sm:px-6 sm:pt-14">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-start gap-x-8 gap-y-2 px-4 pb-5 pt-10 max-sm:justify-center max-sm:pt-6 sm:px-6 sm:pt-14">
           <h1 className="sr-only">Kitepost workspace</h1>
           <nav aria-label="Steps" className="brand-in -mx-1 max-w-full overflow-x-auto px-1 max-sm:-mx-2 max-sm:w-[calc(100%+1rem)] max-sm:max-w-none max-sm:overflow-visible max-sm:px-0">
             <ol className="flex w-max items-center gap-1.5 max-sm:w-full max-sm:flex-wrap max-sm:justify-center max-sm:gap-x-1 max-sm:gap-y-1.5">
@@ -111,18 +126,25 @@ export function Workspace() {
                 );
               })}
               <li className="ml-2 flex gap-1 border-l border-line pl-3 max-sm:ml-0 max-sm:mt-1 max-sm:basis-full max-sm:justify-center max-sm:gap-1.5 max-sm:border-l-0 max-sm:border-t max-sm:pl-0 max-sm:pt-1.5">
-                {SIDE_VIEWS.map((v) => {
+                {sideViews.map((v) => {
                   const active = step === v.id;
+                  const Icon = v.icon;
                   return (
                     <button
                       key={v.id}
                       type="button"
+                      title={v.hint}
                       aria-current={active ? "page" : undefined}
                       onClick={() => setStep(v.id)}
-                      className={`inline-flex h-10 max-sm:h-11 cursor-pointer items-center rounded-full px-4 text-sm transition-colors duration-200 ${
-                        active ? "bg-kite-ink font-medium text-white" : "text-ink-2 hover:bg-sunk hover:text-ink"
+                      className={`inline-flex h-10 max-sm:h-11 cursor-pointer items-center gap-2 rounded-full text-sm transition-colors duration-200 ${Icon ? "pl-3 pr-4" : "px-4"} ${
+                        active
+                          ? "bg-kite-ink font-medium text-white"
+                          : Icon
+                            ? "bg-postal-wash font-medium text-postal-deep hover:bg-sunk"
+                            : "text-ink-2 hover:bg-sunk hover:text-ink"
                       }`}
                     >
+                      {Icon ? <Icon className={`size-4 ${active ? "text-kite-coral" : "text-postal"}`} aria-hidden /> : null}
                       {v.label}
                     </button>
                   );
@@ -130,9 +152,6 @@ export function Workspace() {
               </li>
             </ol>
           </nav>
-          <div className="brand-in">
-            <WorkspaceSwitcher />
-          </div>
         </div>
       </header>
 

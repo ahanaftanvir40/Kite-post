@@ -99,9 +99,10 @@ export function SendPanel() {
       const { runId } = state.run;
       const workspaceId = state.activeWorkspaceId;
       const fileName = state.workbook?.fileName;
+      const tab = state.workbookTabs && state.tabSource ? state.tabSource.sheets[state.activeTab]?.name : undefined;
       const history =
         runId && workspaceId && state.session?.savingAvailable
-          ? { runId, subject: state.subject, workspaceId, ...(fileName ? { fileName } : {}) }
+          ? { runId, subject: state.subject, workspaceId, ...(fileName ? { fileName } : {}), ...(tab ? { tab } : {}) }
           : undefined;
       const rows = mergeRows(
         ids.map((id) => byId.get(id)).filter((r): r is NonNullable<typeof r> => Boolean(r)),

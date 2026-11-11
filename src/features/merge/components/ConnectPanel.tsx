@@ -96,7 +96,7 @@ export function ConnectPanel() {
   }
 
   return (
-    <div ref={root} className="mx-auto grid max-w-4xl gap-10 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:gap-16">
+    <div ref={root} className="grid max-w-4xl gap-10 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:gap-16">
       <section aria-labelledby="connect-title">
         <h2 id="connect-title" className="font-display text-2xl font-semibold tracking-[-0.025em]">
           {connected ? "Mailbox connected" : "Connect your mailbox"}

@@ -115,6 +115,8 @@ export interface RunRef {
   subject: string;
   /** The spreadsheet being sent, so history can show it. */
   fileName?: string;
+  /** The tab being sent, when the file has several kept together. */
+  tab?: string;
   workspaceId: string;
 }
 
